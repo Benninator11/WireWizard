@@ -1,33 +1,35 @@
 # WireWizard
 
-# Server- und KabelWizard
+# Server and Cable Planner
 
-Ein Tool zur Planung, Dokumentation und Strukturierung von Server-Racks und deren Verkabelung. Entwickelt von Benninator111.
+A tool designed for planning, documenting, and structuring server racks and their cabling. Developed by Benninator111.
 
 ## Features
 
-* Server-Rack-Planung: Erstelle Racks und ordne Server-Komponenten flexibel an.
-* Kabel-Management: Dokumentiere Netzwerk- und Stromverbindungen präzise von Port zu Port.
-* Übersichtliche Struktur: Behalte auch bei größeren IT-Infrastrukturen den Überblick.
-* [Hier weiteres Feature einfügen]: Zum Beispiel Export-Funktionen oder Validierungen.
+* Server Rack Planning: Create racks and organize server components flexibly.
+* Cable Management: Document network and power connections precisely from port to port.
+* Clear Structure: Maintain a complete overview of larger IT infrastructures.
+* [Insert additional feature here]: For example, export functions or automated validations.
+
+## Installation and Setup
 
 
-## Nutzung
+## Usage
 
-1. Rack erstellen: Lege ein neues Server-Rack an und bestimme die Höheneinheiten.
-2. Geräte hinzufügen: Platziere Server, Switches oder Patchpanels im Rack.
-3. Verkabeln: Verbinde die Anschlüsse der Geräte miteinander, um den Kabelplan zu erstellen.
+1. Create a Rack: Set up a new server rack and define its rack units (U).
+2. Add Devices: Place servers, switches, or patch panels into the rack.
+3. Establish Cabling: Connect device ports with each other to generate the cable plan.
 
-## Technologien
+## Technologies
 
-Dieses Projekt verwendet folgende Technologien:
-* [Programmiersprache] (z. B. Python, C#, JavaScript)
-* [Framework oder UI-Bibliothek] (z. B. React, WPF, Tkinter)
-* [Datenbank oder Speicherart] (z. B. SQLite, JSON-Dateien)
+This project is built using the following technologies:
+* [Programming Language] (e.g., Python, C#, JavaScript)
+* [Framework or UI Library] (e.g., React, WPF, Tkinter)
+* [Database or Storage Type] (e.g., SQLite, JSON files)
 
-## Lizenz
+## License
 
-Dieses Projekt ist unter der MIT-Lizenz lizenziert.
+This project is licensed under the MIT License.
 
 ---
-Entwickelt von Benninator111 (https://github.com)
+Developed by Benninator11 (https://github.com)
