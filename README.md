@@ -1,39 +1,87 @@
-# WireWizard
+# 🖥️ ServerWizard & WireWizard
 
-# Server and Cable Planner
+**Ein gemeinsames Planungstool für Server, Hardware und Kabelverbindungen.**
 
-A tool designed for planning, documenting, and structuring server racks and their cabling. Developed by Benninator111.
+ServerWizard und WireWizard sind zwei miteinander verbundene Planungswerkzeuge, mit denen sich Serveraufbauten und Kabelverbindungen übersichtlich visualisieren und organisieren lassen. Beide Planer sind in einer gemeinsamen Weboberfläche integriert und können bequem gewechselt werden.
 
-## Features
+## ✨ Funktionen
 
-* Server Rack Planning: Create racks and organize server components flexibly.
-* Cable Management: Document network and power connections precisely from port to port.
-* Clear Structure: Maintain a complete overview of larger IT infrastructures.
-* [Insert additional feature here]: For example, export functions or automated validations.
+### 🖥️ ServerWizard – Serverplaner
 
-## Installation and Setup
+* **Visuelle Planung:** Geräte auf einer Arbeitsfläche platzieren und verschieben.
+* **Geräteverwaltung:** Geräte auswählen, konfigurieren und entfernen.
+* **Hardwarekonfiguration:** Geräteinformationen und verfügbare Anschlüsse bearbeiten.
+* **Leistungsübersicht:** Leistungsaufnahme und Gesamtverbrauch im Blick behalten.
+* **Zoom-Funktion:** Die Arbeitsfläche vergrößern und verkleinern.
+* **JSON-Import und -Export:** Projekte importieren und exportieren.
+* **Mehrsprachigkeit:** Deutsche und englische Benutzeroberfläche.
+* **Hell- und Dunkelmodus:** Die Darstellung an die eigenen Vorlieben anpassen.
 
+### 🔌 WireWizard – Kabelplaner
 
-## Usage
+* Kabelverbindungen zwischen Geräten planen und visualisieren.
+* Netzwerk- und Hardwareaufbauten übersichtlich darstellen.
+* Geräte und Verbindungen innerhalb der gemeinsamen Oberfläche organisieren.
 
-1. Create a Rack: Set up a new server rack and define its rack units (U).
-2. Add Devices: Place servers, switches, or patch panels into the rack.
-3. Establish Cabling: Connect device ports with each other to generate the cable plan.
+*Hinweis: Die genauen Funktionen des WireWizard können je nach implementiertem Funktionsumfang variieren.*
 
-## Technologies
+### 📱 Flexible Darstellung
 
-This project is built using the following technologies:
-* [Programming Language] (e.g., Python, C#, JavaScript)
-* [Framework or UI Library] (e.g., React, WPF, Tkinter)
-* [Database or Storage Type] (e.g., SQLite, JSON files)
+Die Oberfläche bietet verschiedene Ansichtsmodi:
 
-##AI
+* **Auto** – passt die Darstellung automatisch an.
+* **PC** – für die Nutzung am Computer.
+* **Tablet** – für Tablets.
+* **Handy** – für Smartphones.
 
-I Know I used AI to do this but it was fun. :-)
+## 🚀 Installation und Start
 
-## License
+Du benötigst keine klassische Installation, um die HTML-Datei auszuprobieren.
 
-This project is licensed under the MIT License.
+1. Lade das Repository herunter oder klone es.
+2. Öffne den Projektordner.
+3. Starte die Datei `index.html` in einem modernen Webbrowser.
+4. Wähle oben zwischen ServerWizard und WireWizard.
+5. Beginne mit deiner Planung.
+
+### Repository herunterladen
+
+Klicke auf **Code → Download ZIP**, um das Projekt als ZIP-Datei herunterzuladen.
+
+Alternativ kannst du das Repository mit Git klonen:
+
+```bash
+git clone https://github.com/Benninator11/WireWizard.git
+```
+
+## 🛠️ Verwendete Technologien
+
+Das Projekt basiert auf Webtechnologien:
+
+* **HTML5** – Struktur der Anwendung
+* **CSS3** – Gestaltung, Animationen und responsive Darstellung
+* **JavaScript** – Interaktionen und Planungsfunktionen
+* **JSON** – Import und Export von Projektdaten
+
+## 🎯 Projektziel
+
+Das Ziel von ServerWizard und WireWizard ist es, die Planung von Servern, Geräten und Kabelverbindungen einfacher und übersichtlicher zu machen. Statt Aufbauten nur auf Papier zu skizzieren, können sie direkt in einer interaktiven Oberfläche dargestellt und bearbeitet werden.
+
+Das Projekt wird kontinuierlich weiterentwickelt. Neue Funktionen und Verbesserungen können in zukünftigen Versionen hinzukommen.
+
+## 👨‍💻 Autor
+
+**Benninator111**
+
+GitHub: [@Benninator111](https://github.com/Benninator111)
+
+## 📄 Lizenz
+
+Dieses Projekt ist unter der MIT Lizenz
 
 ---
-Developed by Benninator11 (https://github.com)
+
+⭐ **Wenn dir das Projekt gefällt, freue ich mich über einen Stern auf GitHub!**
+
+Vielen Dank, dass du dir ServerWizard und WireWizard ansiehst.
+
