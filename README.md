@@ -27,6 +27,10 @@ This project is built using the following technologies:
 * [Framework or UI Library] (e.g., React, WPF, Tkinter)
 * [Database or Storage Type] (e.g., SQLite, JSON files)
 
+##AI
+
+I Know I used AI to do this but it was fun. :-)
+
 ## License
 
 This project is licensed under the MIT License.
