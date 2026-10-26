@@ -77,7 +77,7 @@ GitHub: [@Benninator111](https://github.com/Benninator111)
 
 ## 📄 Lizenz
 
-Dieses Projekt ist unter der MIT Lizenz
+Dieses Projekt ist unter der MIT Lizenz weiters zur lizenz in der Lizenz Datei
 
 ---
 
