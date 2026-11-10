@@ -1,0 +1,500 @@
+        prev.textContent = en ? '← Previous' : '← Zurück';
+        next.textContent = en ? 'Next →' : 'Weiter →';
+        prev.disabled = currentHelpChapter === 0;
+        next.disabled = currentHelpChapter === chapters.length - 1;
+      }
+
+      function closeHelpBook() {
+        document.getElementById('helpModal').classList.add('hidden');
+      }
+
+
+      function renderLanguage() {
+        const langButtons = document.querySelectorAll('[data-lang]');
+        langButtons.forEach((button) => {
+          const active = button.dataset.lang === state.lang;
+          button.classList.toggle('active', active);
+        });
+
+        document.documentElement.lang = state.lang;
+        applyStaticTranslations();
+        document.querySelectorAll('#addDeviceSidebarBtn, #exportJsonBtn, #importJsonBtn, #deleteSelectionBtn, #cancelDeviceBtn, #saveDeviceBtn, #deleteDeviceBtn, #cableTypeTitle, #deviceListTitle').forEach((el) => {
+          const map = {
+            addDeviceSidebarBtn: 'addDevice',
+            exportJsonBtn: 'jsonExport',
+            importJsonBtn: 'jsonImport',
+            deleteSelectionBtn: 'deleteSelection',
+            cancelDeviceBtn: 'cancel',
+            saveDeviceBtn: 'save',
+            deleteDeviceBtn: 'deviceDelete',
+            cableTypeTitle: 'cableType',
+            deviceListTitle: 'devices'
+          };
+          if (map[el.id]) el.textContent = t(map[el.id]);
+        });
+
+        const hardwareLabels = state.lang === 'en'
+          ? { deviceCpuModelLabel: 'CPU model', deviceRamGbLabel: 'Memory (GB)', deviceCpuCoresLabel: 'CPU cores', deviceCpuClockGHzLabel: 'Clock speed (GHz)', deviceGpuModelLabel: 'GPU model' }
+          : { deviceCpuModelLabel: 'CPU-Modell', deviceRamGbLabel: 'Arbeitsspeicher (GB)', deviceCpuCoresLabel: 'CPU-Kerne', deviceCpuClockGHzLabel: 'Taktfrequenz (GHz)', deviceGpuModelLabel: 'GPU-Modell' };
+        Object.entries(hardwareLabels).forEach(([id, label]) => {
+          document.getElementById(id).textContent = label;
+        });
+
+        document.getElementById('helpBtnLabel').textContent = state.lang === 'en' ? 'Help' : 'Hilfe';
+        document.getElementById('helpBtn').setAttribute('aria-label', state.lang === 'en' ? 'Open handbook' : 'Handbuch öffnen');
+        renderHelpBook();
+
+        document.getElementById('powerLabel').textContent = `${t('power')}: ${calculateTotalPower()} / ${state.maxPowerWatt} W`;
+        ui.themeToggleLabel.textContent = state.theme === 'dark' ? t('lightMode') : t('darkMode');
+        ui.themeToggleBtn.setAttribute('aria-pressed', String(state.theme === 'dark'));
+        ui.zoomOutBtn.setAttribute('aria-label', t('zoomOut'));
+        ui.zoomOutBtn.title = t('zoomOut');
+        ui.zoomInBtn.setAttribute('aria-label', t('zoomIn'));
+        ui.zoomInBtn.title = t('zoomIn');
+        ui.zoomLevel.textContent = `${Math.round(state.zoom * 100)}%`;
+        ui.zoomOutBtn.disabled = state.zoom <= MIN_ZOOM;
+        ui.zoomInBtn.disabled = state.zoom >= MAX_ZOOM;
+      }
+
+      // nach Änderung am gespeicherten Stand neu zeichnen
+      function render() {
+        document.documentElement.dataset.theme = state.theme;
+        renderLanguage();
+        populateTypeSelect();
+        renderPowerBar();
+        populateCableTypeSelect();
+        renderDeviceList();
+        renderDevices();
+        renderCables();
+      }
+
+      // Dragging mit Maus oder Touch.
+      function startDragging(event, deviceId, deviceNode) {
+        const device = getDeviceById(deviceId);
+        if (!device || event.pointerId === undefined) return;
+
+        const pointerId = event.pointerId;
+        const startX = event.clientX;
+        const startY = event.clientY;
+        const initialX = device.x;
+        const initialY = device.y;
+        let moved = false;
+
+        const move = (moveEvent) => {
+          if (moveEvent.pointerId !== pointerId) return;
+          const deltaX = moveEvent.clientX - startX;
+          const deltaY = moveEvent.clientY - startY;
+          if (Math.abs(deltaX) + Math.abs(deltaY) > 4) moved = true;
+          const nextX = clamp(initialX + deltaX / state.zoom, 10, CANVAS_WIDTH - device.w - 10);
+          const nextY = clamp(initialY + deltaY / state.zoom, 10, CANVAS_HEIGHT - device.h - 10);
+          device.x = nextX;
+          device.y = nextY;
+
+          // Element beim Ziehen nicht neu bauen, sonst reißt das Touch-Capture ab.
+          // Neu gezeichnet werden nur die Kabel.
+          if (deviceNode?.isConnected) {
+            deviceNode.style.left = `${device.x}px`;
+            deviceNode.style.top = `${device.y}px`;
+          }
+          renderCables();
+          if (moveEvent.cancelable) moveEvent.preventDefault();
+        };
+
+        const stop = (upEvent) => {
+          if (upEvent && upEvent.pointerId !== pointerId) return;
+          document.removeEventListener('pointermove', move);
+          document.removeEventListener('pointerup', stop);
+          document.removeEventListener('pointercancel', stop);
+          try {
+            if (deviceNode?.hasPointerCapture(pointerId)) deviceNode.releasePointerCapture(pointerId);
+          } catch (err) { /* Pointer war schon freigegeben */ }
+          saveState();
+
+          if (moved) {
+            const suppressClick = (clickEvent) => {
+              clickEvent.preventDefault();
+              clickEvent.stopPropagation();
+              ui.deviceLayer.removeEventListener('click', suppressClick, true);
+            };
+            ui.deviceLayer.addEventListener('click', suppressClick, true);
+            window.setTimeout(() => ui.deviceLayer.removeEventListener('click', suppressClick, true), 350);
+          }
+        };
+
+        document.addEventListener('pointermove', move, { passive: false });
+        document.addEventListener('pointerup', stop);
+        document.addEventListener('pointercancel', stop);
+      }
+
+      // Backup: als Datei exportieren oder wieder einlesen
+      function exportJson() {
+        const payload = JSON.stringify({
+          devices: Array.from(state.devices.values()),
+          cables: Array.from(state.cables.values()),
+          lang: state.lang,
+          theme: state.theme,
+          zoom: state.zoom,
+          selectedCableType: state.selectedCableType,
+          maxPowerWatt: state.maxPowerWatt,
+        }, null, 2);
+        const blob = new Blob([payload], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'serverplaner.json';
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function importJsonFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const parsed = JSON.parse(String(event.target.result));
+            if (!parsed || !Array.isArray(parsed.devices)) throw new Error('invalid');
+            state.devices = new Map((parsed.devices || []).map((device) => [device.id, device]));
+            state.cables = new Map((parsed.cables || []).map((cable) => [cable.id, cable]));
+            state.lang = parsed.lang || state.lang;
+            if (parsed.theme === 'dark' || parsed.theme === 'light') state.theme = parsed.theme;
+            if (Number.isFinite(Number(parsed.zoom))) state.zoom = clamp(Number(parsed.zoom), MIN_ZOOM, MAX_ZOOM);
+            state.selectedCableType = parsed.selectedCableType || state.selectedCableType;
+            state.maxPowerWatt = parsed.maxPowerWatt || MAX_POWER_WATT;
+            state.selectedDeviceId = null;
+            state.selectedCableId = null;
+            state.selectedPort = null;
+            applyZoom(false);
+            saveState();
+            render();
+            showToast(t('imported'));
+          } catch (err) {
+            console.error('JSON-Import fehlgeschlagen:', err);
+            showToast(t('invalidJson'));
+          }
+        };
+        reader.readAsText(file);
+      }
+
+      function handleDeleteKey(event) {
+        if (!ui.modal.classList.contains('hidden')) return;
+
+        if (event.key === 'Delete' && state.hoveredDeviceId && state.devices.has(state.hoveredDeviceId)) {
+          event.preventDefault();
+          state.selectedDeviceId = state.hoveredDeviceId;
+          state.selectedCableId = null;
+          deleteSelectedDevice();
+          return;
+        }
+
+        if (event.key === 'Delete' || event.key === 'Backspace') {
+          if (state.selectedCableId) {
+            event.preventDefault();
+            deleteSelectedCable();
+          } else if (state.selectedDeviceId) {
+            event.preventDefault();
+            deleteSelectedDevice();
+          }
+        }
+      }
+
+      document.getElementById('addDeviceSidebarBtn').addEventListener('click', () => openDeviceModal(null));
+      document.getElementById('addPortRowBtn').addEventListener('click', () => {
+        ui.portConfig.appendChild(createPortRow({ type: 'LAN', side: 'right', speed: '1 GbE', amount: 1 }));
+      });
+      document.getElementById('exportJsonBtn').addEventListener('click', exportJson);
+      document.getElementById('importJsonBtn').addEventListener('click', () => ui.importFileInput.click());
+      ui.importFileInput.addEventListener('change', (event) => importJsonFile(event.target.files[0]));
+      ui.cableColorPicker.addEventListener('change', () => {
+        const cable = state.cables.get(state.selectedCableId);
+        if (!cable) return;
+        cable.color = ui.cableColorPicker.value;
+        cable.colorSource = 'custom';
+        saveState();
+        render();
+      });
+      function setZoom(zoom) {
+        const nextZoom = Math.round(clamp(zoom, MIN_ZOOM, MAX_ZOOM) * 100) / 100;
+        if (nextZoom === state.zoom) return;
+        state.zoom = nextZoom;
+        applyZoom();
+        saveState();
+      }
+
+      function applyZoom(preserveCenter = true) {
+        const shell = ui.canvas.parentElement;
+        const shellRect = shell.getBoundingClientRect();
+        const contentRect = ui.canvasContent.getBoundingClientRect();
+        const contentLeft = contentRect.left - shellRect.left - shell.clientLeft + shell.scrollLeft;
+        const contentTop = contentRect.top - shellRect.top - shell.clientTop + shell.scrollTop;
+        const previousZoom = Number(ui.canvas.dataset.zoom || 1);
+        const focusX = (shell.scrollLeft + shell.clientWidth / 2 - contentLeft) / previousZoom;
+        const focusY = (shell.scrollTop + shell.clientHeight / 2 - contentTop) / previousZoom;
+
+        ui.canvas.style.width = `${CANVAS_WIDTH * state.zoom}px`;
+        ui.canvas.style.height = `${CANVAS_HEIGHT * state.zoom}px`;
+        ui.canvasContent.style.transform = `scale(${state.zoom})`;
+        ui.canvas.style.backgroundSize = `${22 * state.zoom}px ${22 * state.zoom}px`;
+        ui.canvas.dataset.zoom = String(state.zoom);
+
+        if (preserveCenter && previousZoom !== state.zoom) {
+          shell.scrollLeft = contentLeft + focusX * state.zoom - shell.clientWidth / 2;
+          shell.scrollTop = contentTop + focusY * state.zoom - shell.clientHeight / 2;
+        }
+        ui.zoomLevel.textContent = `${Math.round(state.zoom * 100)}%`;
+        ui.zoomOutBtn.disabled = state.zoom <= MIN_ZOOM;
+        ui.zoomInBtn.disabled = state.zoom >= MAX_ZOOM;
+      }
+
+      const helpModal = document.getElementById('helpModal');
+      document.getElementById('helpBtn').addEventListener('click', () => {
+        currentHelpChapter = 0;
+        renderHelpBook();
+        helpModal.classList.remove('hidden');
+        document.getElementById('closeHelpBtn').focus();
+      });
+      document.getElementById('closeHelpBtn').addEventListener('click', () => {
+        closeHelpBook();
+        document.getElementById('helpBtn').focus();
+      });
+      helpModal.addEventListener('click', (event) => {
+        if (event.target === helpModal) closeHelpBook();
+      });
+      document.getElementById('helpPrevBtn').addEventListener('click', () => {
+        if (currentHelpChapter > 0) { currentHelpChapter--; renderHelpBook(); }
+      });
+      document.getElementById('helpNextBtn').addEventListener('click', () => {
+        if (currentHelpChapter < HELP_CHAPTERS[state.lang === 'en' ? 'en' : 'de'].length - 1) {
+          currentHelpChapter++;
+          renderHelpBook();
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !helpModal.classList.contains('hidden')) closeHelpBook();
+      });
+
+      ui.zoomOutBtn.addEventListener('click', () => setZoom(state.zoom - ZOOM_STEP));
+      ui.zoomInBtn.addEventListener('click', () => setZoom(state.zoom + ZOOM_STEP));
+      ui.themeToggleBtn.addEventListener('click', () => {
+        state.theme = state.theme === 'dark' ? 'light' : 'dark';
+        saveState();
+        render();
+      });
+      document.getElementById('deleteSelectionBtn').addEventListener('click', () => {
+        if (state.selectedCableId) deleteSelectedCable();
+        else if (state.selectedDeviceId) deleteSelectedDevice();
+        else showToast(t('noDeviceSelected'));
+      });
+      ui.cableTypeSelect.addEventListener('change', (event) => {
+        state.selectedCableType = event.target.value;
+        saveState();
+      });
+      document.querySelectorAll('[data-lang]').forEach((button) => {
+        button.addEventListener('click', () => {
+          state.lang = button.dataset.lang;
+          saveState();
+          render();
+          if (window.parent !== window) {
+            window.parent.postMessage({ type: 'planner-language-change', lang: state.lang }, '*');
+          }
+        });
+      });
+
+      window.addEventListener('message', (event) => {
+        const message = event.data;
+        if (!message || message.type !== 'planner-set-language' || !['de', 'en'].includes(message.lang)) return;
+        if (state.lang === message.lang) return;
+        state.lang = message.lang;
+        saveState();
+        render();
+      });
+      ui.deviceForm.addEventListener('submit', saveDeviceFromForm);
+      ui.devicePowerWatt.addEventListener('input', () => {
+        const maxPower = document.title.toLowerCase().includes('kabel') ? 3840 : 7680;
+        if (Number(ui.devicePowerWatt.value) > maxPower) ui.devicePowerWatt.value = maxPower;
+        ui.devicePowerWatt.dataset.customized = 'true';
+      });
+      ui.cpuModel.addEventListener('change', updatePowerEstimateFromHardware);
+      ui.gpuModel.addEventListener('change', updatePowerEstimateFromHardware);
+      ui.gpuCount.addEventListener('input', updatePowerEstimateFromHardware);
+      ui.gpuCount.addEventListener('change', () => {
+        ui.gpuCount.value = String(clamp(Math.floor(Number(ui.gpuCount.value) || 1), 1, 16));
+        updatePowerEstimateFromHardware();
+      });
+      ui.cpuModel.addEventListener('change', () => applyPlannerCpuSpecsToForm(false));
+      ui.deviceType.addEventListener('change', () => {
+        syncDeviceTypeControls();
+        syncHardwareFields();
+        if (!state.openDeviceId && ui.devicePowerWatt.dataset.customized !== 'true') {
+          ui.devicePowerWatt.value = getDefaultPowerWatt(ui.deviceType.value);
+        }
+        if (!state.openDeviceId && ui.deviceType.value !== 'Steckdose' && ui.deviceType.value !== 'Steckdosenleiste') {
+          populatePortConfig(null);
+        }
+      });
+      ui.closeModalBtn.addEventListener('click', closeDeviceModal);
+      ui.cancelDeviceBtn.addEventListener('click', closeDeviceModal);
+      ui.deleteDeviceBtn.addEventListener('click', () => {
+        if (state.openDeviceId) {
+          state.selectedDeviceId = state.openDeviceId;
+          deleteSelectedDevice();
+          closeDeviceModal();
+        }
+      });
+      document.addEventListener('keydown', handleDeleteKey);
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          if (!ui.modal.classList.contains('hidden')) return;
+          state.selectedPort = null;
+          state.selectedCableId = null;
+          render();
+        }
+      });
+
+      // Zum Start die Controls verbinden und einmal rendern.
+      function initialize() {
+        loadState();
+        applyZoom(false);
+        ensurePortCableIds();
+        populateTypeSelect();
+        populateCableTypeSelect();
+        populateHardwareLists();
+        render();
+      }
+
+      initialize();
+    <\/script>
+  
+<script>
+(function () {
+  'use strict';
+
+  const css = document.createElement('style');
+  css.textContent = `
+    .extra-toolbar {
+      display:flex;
+      align-items:center;
+      gap:5px;
+      flex-wrap:wrap;
+      max-width:100%;
+      font:11px Arial,sans-serif;
+      padding:2px 0;
+    }
+    .extra-toolbar button {
+      white-space:nowrap;
+      font-size:11px;
+      padding:5px 7px;
+    }
+    .extra-toolbar label {
+      display:flex;
+      align-items:center;
+      gap:4px;
+      color:var(--text,#263346);
+      white-space:nowrap;
+    }
+    .extra-toolbar input[type=number] {
+      width:48px;
+      padding:4px;
+      border:1px solid var(--border,#dfe7f6);
+      border-radius:5px;
+      background:var(--panel,#fff);
+      color:var(--text,#263346);
+      font:11px Arial;
+    }
+    .extra-toolbar .extra-price {
+      width:58px!important;
+    }
+    .extra-toolbar #extraLabel,.extra-toolbar #extraCsv,.extra-toolbar #extraCheck {
+      border:1px solid var(--border,#dfe7f6);
+      background:var(--panel,#fff);
+      color:var(--text,#263346);
+      border-radius:6px;
+      cursor:pointer;
+    }
+    .extra-toolbar #extraVisualizer {
+      border:1px solid var(--border,#dfe7f6);
+      background:var(--panel,#fff);
+      color:var(--text,#263346);
+      border-radius:6px;
+      cursor:pointer;
+      font-weight:700;
+    }
+    .extra-ip-row {
+      grid-column:1/-1;
+      font-size:10px;
+      line-height:1.35;
+      margin-top:3px;
+      overflow-wrap:anywhere;
+    }
+    .extra-ip-row .extra-ip-title {
+      font-weight:700;
+      margin-right:4px;
+    }
+    .extra-ip-row.disconnected {
+      color:#c62828;
+      font-weight:700;
+    }
+    .extra-ip-row.connected {
+      color:#16835d;
+      font-weight:700;
+    }
+    .extra-ip-field {
+      display:block;
+      margin:8px 0 0;
+      font-size:12px;
+    }
+    .extra-ip-field input {
+      display:block;
+      width:100%;
+      box-sizing:border-box;
+      margin-top:4px;
+      padding:8px;
+      border:1px solid var(--border,#dfe7f6);
+      border-radius:7px;
+      background:var(--panel,#fff);
+      color:var(--text,#263346);
+    }
+    .extra-ip-field input.extra-ip-invalid {
+      border:2px solid #c62828!important;
+      background:#fff0f0!important;
+      color:#9f1717!important;
+    }
+    .visualizer-mode .sidebar,.visualizer-mode .topbar-left,.visualizer-mode .topbar-right,.visualizer-mode .port,.visualizer-mode .modal,.visualizer-mode .help-overlay,.visualizer-mode .device-actions {
+      display:none!important;
+    }
+    .visualizer-mode .topbar {
+      padding:5px 10px;
+      gap:4px;
+    }
+    .visualizer-mode .topbar-actions {
+      justify-content:flex-end;
+      min-height:0;
+    }
+    .visualizer-mode .canvas-shell {
+      padding:0;
+    }
+    .visualizer-mode .canvas,.visualizer-mode .device-layer,.visualizer-mode .cable-layer {
+      pointer-events:none!important;
+    }
+    .visualizer-mode .extra-toolbar #extraCsv,.visualizer-mode .extra-toolbar #extraSnap,.visualizer-mode .extra-toolbar #extraGrid,.visualizer-mode .extra-toolbar #extraLabel,.visualizer-mode .extra-toolbar #extraCheck,.visualizer-mode .extra-toolbar #extraPriceWrap {
+      display:none!important;
+    }
+  `;
+  document.head.appendChild(css);
+
+  const toolbar = document.createElement('div');
+  toolbar.className = 'extra-toolbar';
+  toolbar.innerHTML = `
+    <button type="button" class="button" id="extraVisualizer">Visualizer starten</button>
+    <button type="button" class="button" id="extraCsv">CSV importieren</button>
+    <label><input id="extraSnap" type="checkbox"> Raster</label>
+    <label>Raster px <input id="extraGrid" type="number" value="20" min="5" max="100"></label>
+    <button type="button" class="button" id="extraLabel">Kabel-Label</button>
+    <label id="extraPriceWrap">Strompreis €/kWh <input id="extraPrice" class="extra-price" type="number" min="0" max="10" step="0.01" value="0.35"></label>
+    <button type="button" class="button" id="extraCheck">Verbindungen prüfen</button>`;
+  const topbarActions = document.querySelector('.topbar-actions');
+  if (topbarActions) topbarActions.appendChild(toolbar);
+  else document.body.appendChild(toolbar);
+
+  const byId = (id) => document.getElementById(id);
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
