@@ -1,0 +1,500 @@
+    const en = state.lang === 'en';
+    const setText = (selector, value) => { const node = visualOverlay.querySelector(selector); if (node) node.textContent = value; };
+    setText('.ww-library-heading strong', en ? 'Rack Library' : 'Rack-Bibliothek');
+    setText('[data-rack-library-tab="rack"]', 'Rack');
+    setText('[data-rack-library-tab="equipment"]', en ? 'Equipment' : 'Geräte');
+    setText('[data-rack-library-tab="stored"]', en ? 'Stored' : 'Nicht platziert');
+    visualLibrarySearch.placeholder = en ? 'Search equipment…' : 'Geräte suchen…';
+    setText('#wwSortRacks', visualLibrarySort === 'power' ? (en ? 'Sort: power' : 'Sortieren: Leistung') : visualLibrarySort === 'name' ? 'Sort: A–Z' : (en ? 'Sort Racks' : 'Sortieren'));
+    setText('#wwSnapRacks', en ? 'Snap Racks' : 'Am Raster ausrichten');
+    setText('#wwCenterRack', en ? 'Center Rack' : 'Rack zentrieren');
+    setText('#wwResetCamera', en ? 'Reset Camera' : 'Kamera zurücksetzen');
+    setText('#wwVisualMode3d', en ? '3D View' : '3D-Ansicht');
+    setText('#wwVisualModeCool', en ? 'Cooling' : 'Kühlung');
+    setText('[data-rack-inspector-tab="deployed"]', en ? 'Deployed' : 'Platziert');
+    setText('[data-rack-inspector-tab="selected"]', en ? 'Selected' : 'Ausgewählt');
+    setText('[data-rack-inspector-tab="scene"]', 'Scene');
+    setText('#wwAddCableManager', en ? '+ Cable manager' : '+ Kabelorganisator');
+    setText('#ww3dEmpty', en ? 'No equipment in this rack yet. Add equipment from the library.' : 'Noch keine Geräte im Rack. Füge Geräte über die Bibliothek hinzu.');
+    const coolingLegend = visualOverlay.querySelectorAll('.ww-cooling-legend span');
+    if (coolingLegend[0]) coolingLegend[0].innerHTML = `<i class="cool"></i>${en ? 'Lower load' : 'Geringere Last'}`;
+    if (coolingLegend[1]) coolingLegend[1].innerHTML = `<i class="warm"></i>${en ? 'Elevated load' : 'Erhöhte Last'}`;
+    if (coolingLegend[2]) coolingLegend[2].innerHTML = `<i class="hot"></i>${en ? 'High load' : 'Hohe Last'}`;
+    const capacityLabel = visualOverlay.querySelector('label[for="wwVisualCapacity"]');
+    if (capacityLabel) capacityLabel.firstChild.textContent = en ? 'Rack ' : 'Schrank ';
+    const scaleLabel = visualOverlay.querySelector('label[for="wwVisualScale"]');
+    if (scaleLabel) scaleLabel.firstChild.textContent = en ? 'Scale ' : 'Größe ';
+    visualBackToggle.setAttribute('aria-label', en ? 'Toggle rack front and rear' : 'Rack-Vorder- und Rückseite wechseln');
+    visualOverlay.querySelector('#wwVisualClose').setAttribute('aria-label', en ? 'Close rack view' : 'Rack-Ansicht schließen');
+  }
+  function visualSetMode(mode) {
+    visualMode = mode;
+    visual3dView.hidden = mode !== '3d';
+    visualCoolingView.hidden = mode !== 'cooling';
+    visualOverlay.querySelector('#wwVisualMode3d').classList.toggle('active',mode === '3d');
+    visualOverlay.querySelector('#wwVisualModeCool').classList.toggle('active',mode === 'cooling');
+    visualOverlay.querySelector('#wwVisualTitle').textContent = mode === '3d' ? visualT('Virtuelles 3D-Rack','Virtual 3D rack') : visualT('Kühlung & Wärmelast','Cooling & heat load');
+    visualOverlay.querySelector('#wwVisualSubtitle').textContent = mode === '3d' ? visualT('Drehe das Rack mit der Maus.','Rotate the rack with your mouse.') : visualT('Vereinfachte Visualisierung anhand der eingetragenen Leistungsaufnahme.','Simplified visualisation based on configured power draw.');
+    visualOverlay.querySelector('#ww3dHelpText').textContent = mode === '3d' ? visualT('Ziehen zum Drehen · Shift + Ziehen zum Schwenken · Mausrad zum Zoomen.','Drag to orbit · Shift + drag to pan · scroll to zoom.') : visualT('Vereinfachte Luftstrom- und Wärmelastdarstellung.','Simplified airflow and heat-load view.');
+    const coolingHelp = visualCoolingView.querySelector('.ww-3d-instructions span');
+    if (coolingHelp) coolingHelp.textContent = visualT('Luftstrom und geschätzte Wärmelast','Airflow and estimated thermal load');
+    const airflowLabel = visualOverlay.querySelector('.ww-cooling-toggle');
+    if (airflowLabel) airflowLabel.lastChild.textContent = visualT(' Luftstrom animieren',' Animate airflow');
+    visualOverlay.querySelector('#wwVisualMode3d').classList.toggle('active',mode === '3d');
+    visualOverlay.querySelector('#wwVisualModeCool').classList.toggle('active',mode === 'cooling');
+    visualStatsTitle.textContent = mode === '3d' ? visualT('Rack-Übersicht','Rack overview') : visualT('Wärmelast-Übersicht','Heat-load overview');
+    visualNote.textContent = mode === '3d'
+      ? visualT('Die Gerätehöhe folgt den Höheneinheiten. Die Gehäusetiefe wird als typabhängige 3D-Proportion dargestellt; Kabel erscheinen als schattierte Rundkabel mit Steckern. Maße sind schematisch, sofern keine bestätigten Herstellerabmessungen vorliegen.','Device height follows rack units. Visible device depth is a schematic type estimate, not a verified manufacturer dimension.')
+      : visualT('Die Kühlungsansicht schätzt Wärme aus konfigurierter Leistungsaufnahme; sie misst keine echte Temperatur und ersetzt keine thermische Berechnung.','This cooling view estimates heat from configured power draw; it does not measure real temperature or replace thermal engineering.');
+    renderVisualRack();
+  }
+  function visualUpdateStats() {
+    const stats = visualAllDeviceStats();
+    const cap = visualCapacityCount();
+    const placedUnits = stats.placed.reduce((sum,item)=>sum+item.placement.height,0);
+    const html = [
+      [visualT('Geräte gesamt','Total devices'),String(stats.all.length),visualT('im Projekt','in project')],
+      [visualT('Geräte platziert','Devices placed'),String(stats.placed.length),`${stats.unplaced} ${visualT('nicht im Rack','not in rack')}`],
+      [visualT('Strom-/Wärmelast','Power / heat load'),`${Math.round(stats.total).toLocaleString()} W`,visualT('konfiguriert, geschätzt','configured estimate')],
+      [visualT('Belegte Höheneinheiten','Rack units used'),`${placedUnits} / ${cap} U`,`${Math.round(placedUnits/cap*100)}% ${visualT('Belegung','occupied')}`]
+    ];
+    visualStats.replaceChildren();
+    html.forEach(([title,value,note])=>{
+      const row=document.createElement('div');row.className='ww-visual-stat';
+      const strong=document.createElement('strong');strong.textContent=value;
+      const label=document.createElement('span');label.textContent=`${title} · ${note}`;
+      row.append(strong,label);visualStats.appendChild(row);
+    });
+    const listTitle=document.createElement('h3');listTitle.style.marginTop='14px';listTitle.textContent=visualT('Höchste Leistungswerte','Highest power draw');visualStats.appendChild(listTitle);
+    const list=document.createElement('div');list.className='ww-visual-device-list';
+    if (!stats.highest.length) { const empty=document.createElement('p');empty.className='ww-visual-note';empty.textContent=visualT('Noch keine Geräte angelegt.','No devices have been added yet.');list.appendChild(empty); }
+    stats.highest.forEach(device=>{
+      const row=document.createElement('div');row.className='ww-visual-device-row';
+      const name=document.createElement('strong');name.textContent=device.name||visualT('Gerät','Device');
+      const watts=document.createElement('span');watts.textContent=`${Math.max(0,Number(device.powerWatt)||0)} W`;
+      row.append(name,watts);list.appendChild(row);
+    });
+    visualStats.appendChild(list);
+  }
+  const visualSvgNamespace = 'http://www.w3.org/2000/svg';
+  function visualSvgNode(tag, attributes = {}) {
+    const node = document.createElementNS(visualSvgNamespace, tag);
+    Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, String(value)));
+    return node;
+  }
+  function visualRearCableColor(cable) {
+    return cable.color || getCableColor(cable.type) || '#43b9e8';
+  }
+  function renderVisualRear(placed, capacity, unit, totalHeight) {
+    if (!visualRearSvg) return;
+    visualRearSvg.replaceChildren();
+    visualRearSvg.setAttribute('viewBox', `0 0 300 ${totalHeight}`);
+    visualRearSvg.setAttribute('preserveAspectRatio', 'none');
+
+    const equipmentLayer = visualSvgNode('g', { 'aria-label': 'Rack-Geräterückseiten und Lüfter' });
+    const cableLayer = visualSvgNode('g', { 'aria-label': 'Verbundene Kabel' });
+    const portLayer = visualSvgNode('g', { 'aria-label': 'Kabelanschlüsse' });
+    visualRearSvg.append(equipmentLayer, cableLayer, portLayer);
+
+    const placedById = new Map(placed.map((item) => [String(item.device.id), item]));
+    const cableByEndpoint = new Map();
+    const endpointKey = (deviceId, portId) => `${String(deviceId)}::${String(portId)}`;
+    const cables = [...state.cables.values()];
+    cables.forEach((cable) => {
+      if (cable.fromPortId != null) cableByEndpoint.set(endpointKey(cable.fromDeviceId, cable.fromPortId), cable);
+      if (cable.toPortId != null) cableByEndpoint.set(endpointKey(cable.toDeviceId, cable.toPortId), cable);
+    });
+    const findDevice = (id) => state.devices.get(id) || state.devices.get(String(id)) || [...state.devices.values()].find((device) => String(device.id) === String(id)) || null;
+    const itemTop = (item) => (capacity - item.placement.top) * unit;
+    const itemHeight = (item) => Math.max(7, item.placement.height * unit - 1);
+    const hasFans = (device) => /server|switch|router|firewall|storage|nas|san|kvm|load.?balancer|gaming.?pc|pc|workstation|rack.?k.hler/i.test(String(device.type || ''));
+
+    // Rückwand pro Gerät im gewählten Rack
+    placed.forEach(({ device, placement }) => {
+      const top = itemTop({ placement });
+      const height = itemHeight({ placement });
+      const fanDevice = hasFans(device);
+      const ports = Array.isArray(device.ports) ? device.ports : [];
+      const panel = visualSvgNode('rect', { x: 10, y: top + 0.5, width: 280, height: Math.max(6, height - 1), rx: 1.5, fill: '#202e39', stroke: '#a3b1bb', 'stroke-width': 0.8 });
+      equipmentLayer.appendChild(panel);
+      equipmentLayer.appendChild(visualSvgNode('path', { d: `M 13 ${top + 2} H 287`, stroke: '#d7e1e8', 'stroke-width': 0.7, opacity: 0.72 }));
+      equipmentLayer.appendChild(visualSvgNode('path', { d: `M 13 ${top + height - 2} H 287`, stroke: '#080f14', 'stroke-width': 0.7, opacity: 0.9 }));
+
+      // Netzteile / Wartungsklappen links
+      if (height >= 9) {
+        const psuWidth = Math.max(12, Math.min(24, height * 1.45));
+        equipmentLayer.appendChild(visualSvgNode('rect', { x: 16, y: top + Math.max(1, (height - Math.min(height - 2, psuWidth * 0.45)) / 2), width: psuWidth, height: Math.min(height - 2, psuWidth * 0.45), rx: 1, fill: '#111b23', stroke: '#677985', 'stroke-width': 0.6 }));
+        equipmentLayer.appendChild(visualSvgNode('path', { d: `M 18 ${top + height / 2} h ${Math.max(5, psuWidth - 5)}`, stroke: '#50616d', 'stroke-width': 0.7 }));
+      }
+
+      if (height >= 15) {
+        const label = visualSvgNode('text', { x: 18, y: top + height / 2 + 2.2, 'font-size': 6, fill: '#dce6ed', opacity: 0.92 });
+        label.textContent = String(device.name || device.type || 'Gerät').slice(0, 24);
+        equipmentLayer.appendChild(label);
+      }
+
+      // Lüfter hinten, nur Optik
+      if (fanDevice) {
+        const fanRadius = Math.max(2.2, Math.min(6.2, height * 0.27));
+        const fanXs = ports.length > 12 ? [260, 280] : [210, 235, 260];
+        fanXs.forEach((cx) => {
+          const cy = top + height / 2;
+          const group = visualSvgNode('g', { 'aria-label': 'Lüfterausgang' });
+          const title = visualSvgNode('title'); title.textContent = 'Lüfterausgang / Abluft'; group.appendChild(title);
+          group.appendChild(visualSvgNode('circle', { cx, cy, r: fanRadius, fill: '#0b1218', stroke: '#bdcbd4', 'stroke-width': 0.85 }));
+          group.appendChild(visualSvgNode('circle', { cx, cy, r: Math.max(0.8, fanRadius * 0.26), fill: '#738894', stroke: '#e0e7ec', 'stroke-width': 0.45 }));
+          for (let blade = 0; blade < 4; blade++) {
+            const angle = (Math.PI / 2) * blade + 0.25;
+            const x1 = cx + Math.cos(angle) * fanRadius * 0.3;
+            const y1 = cy + Math.sin(angle) * fanRadius * 0.3;
+            const x2 = cx + Math.cos(angle + 0.55) * fanRadius * 0.78;
+            const y2 = cy + Math.sin(angle + 0.55) * fanRadius * 0.78;
+            group.appendChild(visualSvgNode('path', { d: `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`, stroke: '#90a7b5', 'stroke-width': 0.8, 'stroke-linecap': 'round', fill: 'none' }));
+          }
+          equipmentLayer.appendChild(group);
+        });
+        if (height >= 17) {
+          const exhaustLabel = visualSvgNode('text', { x: ports.length > 12 ? 246 : 198, y: top + height - 2.5, 'font-size': 4.6, fill: '#b8c7d0', 'text-anchor': 'middle' });
+          exhaustLabel.textContent = 'ABLuft';
+          equipmentLayer.appendChild(exhaustLabel);
+        }
+      }
+
+      // kleine Buchsen-Umrisse, damit man die Portleiste erkennt
+      const portsToDraw = ports.slice(0, 96);
+      portsToDraw.forEach((port) => {
+        const cable = cableByEndpoint.get(endpointKey(device.id, port.id));
+        const span = fanDevice ? (ports.length > 12 ? 226 : 160) : 260;
+        const index = Math.max(0, ports.findIndex((candidate) => String(candidate.id) === String(port.id)));
+        const x = 20 + ((index + 0.5) / Math.max(1, ports.length)) * span;
+        const y = top + height / 2;
+        if (!cable) {
+          if (ports.length <= 36) {
+            portLayer.appendChild(visualSvgNode('rect', { x: x - 1.5, y: y - 1.8, width: 3, height: 3.6, rx: 0.5, fill: '#111a21', stroke: '#607583', 'stroke-width': 0.55 }));
+          }
+          return;
+        }
+        const color = visualRearCableColor(cable);
+        portLayer.appendChild(visualSvgNode('rect', { x: x - 2.3, y: y - 2.3, width: 4.6, height: 4.6, rx: 0.7, fill: color, stroke: '#f6fbff', 'stroke-width': 0.8 }));
+        const portTitle = visualSvgNode('title');
+        portTitle.textContent = `${device.name || device.type || 'Gerät'} · ${port.name || port.label || port.id} · ${cable.type || 'Kabel'}`;
+        portLayer.lastChild.appendChild(portTitle);
+      });
+    });
+
+    function getPortPoint(deviceId, portId) {
+      const item = placedById.get(String(deviceId));
+      const device = findDevice(deviceId);
+      if (!item || !device) return null;
+      const ports = Array.isArray(device.ports) ? device.ports : [];
+      const idx = ports.findIndex((port) => String(port.id) === String(portId));
+      const fanDevice = hasFans(device);
+      const span = fanDevice ? (ports.length > 12 ? 226 : 160) : 260;
+      const x = idx >= 0 ? 20 + ((idx + 0.5) / Math.max(1, ports.length)) * span : (fanDevice ? 175 : 150);
+      const y = itemTop(item) + itemHeight(item) / 2;
+      return { x, y, device, port: idx >= 0 ? ports[idx] : null };
+    }
+
+    // Kabel als Röhren zeichnen (Schatten, Mantel, Glanzlicht, Stecker).
+    // Das SVG hängt an der Rack-Rückseite und dreht beim Drehen mit.
+    const cableTypeWidth = (cable) => {
+      const label = `${cable.type || ''} ${cable.name || ''}`.toLowerCase();
+      if (/strom|power|netzteil|230\s*v/.test(label)) return 4.5;
+      if (/glasfaser|fiber|optical|sfp|qsfp/.test(label)) return 2.2;
+      if (/dac|aoc/.test(label)) return 3.1;
+      if (/cat\s*[568]|ethernet|lan|rj45/.test(label)) return 2.8;
+      if (/usb/.test(label)) return 2.6;
+      return 3.0;
+    };
+    const darkenCableColor = (value, amount = 0.52) => {
+      const hex = String(value || '#43b9e8').replace('#', '').trim();
+      if (!/^[0-9a-f]{3}([0-9a-f]{3})?$/i.test(hex)) return '#173143';
+      const full = hex.length === 3 ? hex.split('').map((part) => part + part).join('') : hex;
+      const channels = [0, 2, 4].map((offset) => Math.max(0, Math.round(parseInt(full.slice(offset, offset + 2), 16) * amount)));
+      return '#' + channels.map((part) => part.toString(16).padStart(2, '0')).join('');
+    };
+    const addCablePlug = (x, y, color, angle, titleText) => {
+      const group = visualSvgNode('g', {
+        transform: `translate(${x} ${y}) rotate(${angle})`,
+        'aria-label': 'Kabelstecker',
+        'data-3d-cable-plug': 'true'
+      });
+      const titleNode = visualSvgNode('title'); titleNode.textContent = titleText; group.appendChild(titleNode);
+      // Schatten, Knickschutz, Metallhülse, farbiger Clip
+      group.appendChild(visualSvgNode('rect', { x: -2.2, y: -3.3, width: 9.8, height: 7.0, rx: 1.6, fill: '#03080d', opacity: 0.72, transform: 'translate(0 1.1)' }));
+      group.appendChild(visualSvgNode('rect', { x: -2.3, y: -3.1, width: 4.5, height: 6.2, rx: 1.2, fill: darkenCableColor(color, 0.55), stroke: '#d3e0e8', 'stroke-width': 0.65 }));
+      group.appendChild(visualSvgNode('rect', { x: 1.2, y: -3.6, width: 5.7, height: 7.2, rx: 1.4, fill: color, stroke: '#f6fbff', 'stroke-width': 0.65 }));
+      group.appendChild(visualSvgNode('path', { d: 'M 2.1 -2.5 H 5.9', stroke: '#fff', 'stroke-width': 0.8, opacity: 0.68, 'stroke-linecap': 'round' }));
+      group.appendChild(visualSvgNode('path', { d: 'M 2.2 2.3 H 5.7', stroke: darkenCableColor(color, 0.48), 'stroke-width': 0.75, 'stroke-linecap': 'round' }));
+      group.appendChild(visualSvgNode('rect', { x: 6.1, y: -2.3, width: 2.2, height: 4.6, rx: 0.45, fill: '#bdcbd4', stroke: '#f5fafc', 'stroke-width': 0.55 }));
+      portLayer.appendChild(group);
+    };
+
+    // Kabelführung (Rückgrat + Kämme) fest an der Rack-Rückseite
+    const manager = visualSvgNode('g', { 'aria-label': 'Vertikale Kabelmanagement-Schiene' });
+    manager.appendChild(visualSvgNode('path', { d: `M 285 6 V ${Math.max(6, totalHeight - 6)}`, fill: 'none', stroke: '#03080d', 'stroke-width': 8.5, 'stroke-linecap': 'round', opacity: 0.62 }));
+    manager.appendChild(visualSvgNode('path', { d: `M 284 6 V ${Math.max(6, totalHeight - 6)}`, fill: 'none', stroke: '#354955', 'stroke-width': 6.5, 'stroke-linecap': 'round' }));
+    manager.appendChild(visualSvgNode('path', { d: `M 282.5 8 V ${Math.max(8, totalHeight - 8)}`, fill: 'none', stroke: '#8295a1', 'stroke-width': 1.0, 'stroke-linecap': 'round', opacity: 0.72 }));
+    for (let y = 12; y < totalHeight - 8; y += Math.max(8, unit * 0.8)) {
+      manager.appendChild(visualSvgNode('path', { d: `M 278 ${y} h 11`, stroke: '#c7d2d9', 'stroke-width': 1.0, opacity: 0.7 }));
+    }
+    cableLayer.appendChild(manager);
+
+    let cableIndex = 0;
+    cables.forEach((cable) => {
+      const fromItem = placedById.get(String(cable.fromDeviceId));
+      const toItem = placedById.get(String(cable.toDeviceId));
+      if (!fromItem && !toItem) return;
+      const fromPoint = fromItem ? getPortPoint(cable.fromDeviceId, cable.fromPortId) : null;
+      const toPoint = toItem ? getPortPoint(cable.toDeviceId, cable.toPortId) : null;
+      const color = visualRearCableColor(cable);
+      const width = cableTypeWidth(cable);
+      let x1, y1, x2, y2, trunkX, d;
+      if (fromPoint && toPoint) {
+        x1 = fromPoint.x; y1 = fromPoint.y; x2 = toPoint.x; y2 = toPoint.y;
+        // mehrere Bahnen, damit sich dichte Bündel nicht überdecken
+        trunkX = 276 - (cableIndex % 9) * 1.8;
+        const sideOut = Math.max(7, Math.min(20, (trunkX - x1) * 0.22));
+        const sideIn = Math.max(7, Math.min(20, (trunkX - x2) * 0.22));
+        const midOffset = ((cableIndex % 5) - 2) * Math.max(2.5, unit * 0.2);
+        d = `M ${x1} ${y1} C ${x1 + sideOut} ${y1}, ${trunkX - 16} ${y1 + midOffset}, ${trunkX} ${y1 + midOffset} C ${trunkX + 7} ${y1 + midOffset}, ${trunkX + 7} ${y2 - midOffset}, ${trunkX} ${y2 - midOffset} C ${trunkX - 16} ${y2 - midOffset}, ${x2 + sideIn} ${y2}, ${x2} ${y2}`;
+      } else {
+        const attached = fromPoint || toPoint;
+        x1 = attached.x; y1 = attached.y;
+        x2 = fromPoint ? 294 : 6;
+        y2 = Math.max(10, Math.min(totalHeight - 10, y1 + ((cableIndex % 7) - 3) * Math.max(4, unit * 1.3)));
+        trunkX = fromPoint ? 280 - (cableIndex % 6) * 2.2 : 20 + (cableIndex % 6) * 2.2;
+        d = `M ${x1} ${y1} C ${x1 + (fromPoint ? 12 : -12)} ${y1}, ${trunkX} ${y1 + 2}, ${trunkX} ${y1 + 5} C ${trunkX} ${y2 - 5}, ${x2 + (fromPoint ? -12 : 12)} ${y2}, ${x2} ${y2}`;
+      }
+
+      const titleText = (() => {
+        const fromDevice = findDevice(cable.fromDeviceId), toDevice = findDevice(cable.toDeviceId);
+        const fromPort = fromDevice?.ports?.find((port) => String(port.id) === String(cable.fromPortId));
+        const toPort = toDevice?.ports?.find((port) => String(port.id) === String(cable.toPortId));
+        return `${cable.type || 'Kabel'}: ${fromDevice?.name || fromDevice?.type || 'Extern'} / ${fromPort?.name || fromPort?.label || fromPort?.id || ''} → ${toDevice?.name || toDevice?.type || 'Extern'} / ${toPort?.name || toPort?.label || toPort?.id || ''}`;
+      })();
+      // Mehrere Striche übereinander: Schatten, Gummi, Mantel, Glanz. Glasfaser bekommt einen leichten Schein.
+      const shadow = visualSvgNode('path', { d, fill: 'none', stroke: '#02070b', 'stroke-width': width + 3.1, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.82, transform: 'translate(0 1.3)', filter: 'drop-shadow(0 1.2px 1px rgba(0,0,0,.68))' });
+      const jacket = visualSvgNode('path', { d, fill: 'none', stroke: darkenCableColor(color, 0.34), 'stroke-width': width + 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+      const wire = visualSvgNode('path', { d, fill: 'none', stroke: color, 'stroke-width': width, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'data-3d-cable': 'true', 'data-cable-type': String(cable.type || 'Kabel') });
+      const sheen = visualSvgNode('path', { d, fill: 'none', stroke: '#fff', 'stroke-width': Math.max(0.45, width * 0.22), 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.58, transform: 'translate(0 -0.55)', 'pointer-events': 'none' });
+      const title = visualSvgNode('title'); title.textContent = `${titleText} · 3D-Tubus, Stärke schematisch`; wire.appendChild(title);
+      cableLayer.append(shadow, jacket, wire, sheen);
+      if (fromPoint) {
+        const angle = fromPoint && toPoint ? 0 : (fromPoint ? 0 : 180);
+        addCablePlug(fromPoint.x, fromPoint.y, color, angle, `Stecker an ${titleText}`);
+      }
+      if (toPoint) {
+        const angle = fromPoint && toPoint ? 180 : (toPoint ? 180 : 0);
+        addCablePlug(toPoint.x, toPoint.y, color, angle, `Stecker an ${titleText}`);
+      }
+      if (!fromPoint || !toPoint) {
+        const endpointX = fromPoint ? x2 : x2;
+        addCablePlug(endpointX, y2, color, fromPoint ? 0 : 180, `Kabelabgang aus dem Rack · ${titleText}`);
+      }
+      cableIndex += 1;
+    });
+
+  }
+  function visualUpdateBackToggle() {
+    if (!visualBackToggle) return;
+    visualBackToggle.textContent = state.lang === 'en'
+      ? (visualBackSideShown ? 'Show front' : 'Show rear')
+      : (visualBackSideShown ? 'Vorderseite zeigen' : 'Rückseite zeigen');
+    visualBackToggle.title = state.lang === 'en'
+      ? 'Switch between the rack front and the rear with connected cables and fan outlets'
+      : 'Zwischen Rack-Vorderseite und Rückseite mit Kabeln und Lüfterausgängen wechseln';
+  }
+  function visualApplyCamera() {
+    visualCabinet.style.transform = `translate3d(${visualPanX}px,${visualPanY}px,0) rotateX(${visualPitch}deg) rotateY(${visualYaw}deg)`;
+  }
+
+  function renderVisualRack() {
+    if (!visualOverlay || visualOverlay.hidden) return;
+    visualUpdateWorkspaceLabels();
+    const cap=visualCapacityCount(), unit=visualUnitSize(), height=cap*unit;
+    // Einbauraum liegt zwischen den Rack-Rändern, HE-Positionen darauf umrechnen
+    const innerHeight = Math.max(1, height - 18);
+    const innerUnit = innerHeight / cap;
+    visualCabinet.style.setProperty('--cabinet-height',`${height}px`);
+    visualCabinet.style.height=`${height}px`;
+    visualApplyCamera();
+    visualOverlay.querySelector('.ww-3d-scene').style.minHeight=`${height+90}px`;
+    visual3dDevices.replaceChildren();
+    visualCoolingDevices.replaceChildren();
+    const placed=visualPlacedDevices();
+    renderVisualRear(placed, cap, unit, height);
+    visualRack3dCount.textContent=`${placed.length} ${visualT('Geräte im Rack','devices in rack')}`;
+    visualOverlay.querySelector('#ww3dEmpty').hidden=placed.length!==0;
+    visualOverlay.querySelector('#ww3dInner').style.height=`${innerHeight}px`;
+    visualUScale.replaceChildren();
+    for (let u = cap; u >= 1; u--) {
+      const mark = document.createElement('div');
+      mark.className = 'ww-3d-u-mark';
+      mark.style.top = `${(cap - u) * innerUnit}px`;
+      mark.style.height = `${innerUnit}px`;
+      mark.textContent = String(u);
+      visualUScale.appendChild(mark);
+    }
+    visualOverlay.querySelector('#wwCoolingRack').style.setProperty('--cool-rack-height',`${height}px`);
+    visualOverlay.querySelector('#wwCoolingRack').style.height=`${height}px`;
+    placed.forEach(({device,placement})=>{
+      const top=(cap-placement.top)*innerUnit;
+      const dh=Math.max(5,placement.height*innerUnit-0.8);
+      const block=document.createElement('div');block.className=`ww-3d-device ${visualDeviceClass(device)}`;block.style.top=`${top}px`;block.style.height=`${dh}px`;
+      // Beschriftung muss in die HE-Höhe passen, sonst überlappt sie bei 1U
+      const faceFontSize=Math.max(4.8,Math.min(10,dh*0.46));
+      block.style.fontSize=`${faceFontSize}px`;
+      block.style.lineHeight='1';
+      const depthInfo=visualDeviceDepthInfo(device);
+      block.style.setProperty('--device-depth',`${depthInfo.px}px`);
+      const topFace=document.createElement('i');topFace.className='ww-device-top';topFace.setAttribute('aria-hidden','true');
+      const rightFace=document.createElement('i');rightFace.className='ww-device-side';rightFace.setAttribute('aria-hidden','true');
+      const leftFace=document.createElement('i');leftFace.className='ww-device-left';leftFace.setAttribute('aria-hidden','true');
+      const rearFace=document.createElement('i');rearFace.className='ww-device-back';rearFace.setAttribute('aria-hidden','true');
+      const name=document.createElement('span');name.textContent=device.name||visualT('Gerät','Device');name.style.fontSize=`${faceFontSize}px`;
+      const watts=document.createElement('span');watts.className='ww-watts';watts.textContent=`${Math.max(0,Number(device.powerWatt)||0)}W`;watts.style.fontSize=`${Math.max(4.5,Math.min(8,dh*0.4))}px`;
+      block.title=`${device.name||'Gerät'} · Höhe ${placement.height} U (U${placement.start}–U${placement.top}) · Tiefe ca. ${depthInfo.mm} mm (schematische Typannahme) · ${Math.max(0,Number(device.powerWatt)||0)} W`;
+      block.tabIndex = 0;
+      block.setAttribute('role','button');
+      block.setAttribute('aria-label', `${device.name || 'Gerät'} auswählen`);
+      if (String(device.id) === visualSelectedDeviceId) block.classList.add('is-selected');
+      block.addEventListener('click', (event) => { event.stopPropagation(); visualSelectDevice(device.id); });
+      block.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); visualSelectDevice(device.id); } });
+      block.append(topFace,rightFace,leftFace,rearFace,name,watts);visual3dDevices.appendChild(block);
+      const heat=document.createElement('div');const wattsValue=Math.max(0,Number(device.powerWatt)||0);
+      heat.className='ww-cool-device'+(wattsValue>=900?' heat-hot':wattsValue>=350?' heat-warm':'');
+      heat.style.top=`${top}px`;heat.style.height=`${dh}px`;
+      const heatName=document.createElement('span');heatName.textContent=device.name||visualT('Gerät','Device');
+      const heatPower=document.createElement('span');heatPower.textContent=`${wattsValue} W`;
+      heat.title=`${device.name||'Gerät'} · geschätzte Wärmelast ${wattsValue} W`;
+      heat.append(heatName,heatPower);visualCoolingDevices.appendChild(heat);
+    });
+    visualOverlay.querySelector('#wwAirflowLayer').style.height=`${height}px`;
+    visualCoolingStage.classList.toggle('air-off',!visualOverlay.querySelector('#wwAirflowToggle').checked);
+    visualUpdateStats();
+    visualUpdateLibrary();
+    visualUpdateInspector();
+  }
+  function openVisualRack(mode) {
+    visualOverlay.hidden=false;
+    visualCapacity.value=String(serverRackCapacity());
+    visualSetLibraryTab(visualLibraryTab);
+    visualSetInspectorTab(visualSelectedDeviceId ? 'selected' : 'deployed');
+    visualSetMode(mode);
+    rack3dButton.setAttribute('aria-pressed',String(mode==='3d'));
+    coolingButton.setAttribute('aria-pressed',String(mode==='cooling'));
+  }
+  function closeVisualRack() { visualOverlay.hidden=true;rack3dButton.setAttribute('aria-pressed','false');coolingButton.setAttribute('aria-pressed','false'); }
+  rack3dButton.addEventListener('click',()=>openVisualRack('3d'));
+  coolingButton.addEventListener('click',()=>openVisualRack('cooling'));
+  visualOverlay.querySelector('#wwVisualMode3d').addEventListener('click',()=>visualSetMode('3d'));
+  visualOverlay.querySelector('#wwVisualModeCool').addEventListener('click',()=>visualSetMode('cooling'));
+  visualOverlay.querySelectorAll('[data-rack-library-tab]').forEach((button)=>button.addEventListener('click',()=>visualSetLibraryTab(button.dataset.rackLibraryTab)));
+  visualOverlay.querySelectorAll('[data-rack-inspector-tab]').forEach((button)=>button.addEventListener('click',()=>visualSetInspectorTab(button.dataset.rackInspectorTab)));
+  visualLibrarySearch.addEventListener('input',visualUpdateLibrary);
+  visualOverlay.querySelector('#wwAddCableManager').addEventListener('click',addRackCableManager);
+  visualOverlay.querySelector('#wwSortRacks').addEventListener('click',()=>{
+    visualLibrarySort = visualLibrarySort === 'category' ? 'name' : visualLibrarySort === 'name' ? 'power' : 'category';
+    const labels = {category:visualT('Sort: category','Sort: category'),name:'Sort: A–Z',power:visualT('Sort: power','Sort: power')};
+    visualOverlay.querySelector('#wwSortRacks').textContent = labels[visualLibrarySort];
+    visualUpdateLibrary();
+  });
+  visualSnapButton.addEventListener('click',()=>{
+    visualSnapEnabled = !visualSnapEnabled;
+    visualSnapButton.classList.toggle('active',visualSnapEnabled);
+    visualSnapButton.setAttribute('aria-pressed',String(visualSnapEnabled));
+    visualSnapButton.title = visualT('Rack-Platzierung wird auf ganze Höheneinheiten gesetzt.','Rack placement is aligned to whole rack units.');
+  });
+  const resetVisualCamera = (center=false)=>{
+    visualYaw = center ? -24 : -32;
+    visualPitch = center ? -9 : -13;
+    visualPanX = 0;
+    visualPanY = 0;
+    visualBackSideShown = false;
+    visualApplyCamera();
+    visualUpdateBackToggle();
+  };
+  visualOverlay.querySelector('#wwCenterRack').addEventListener('click',()=>resetVisualCamera(true));
+  visualOverlay.querySelector('#wwResetCamera').addEventListener('click',()=>resetVisualCamera(false));
+  visualBackToggle.addEventListener('click',()=>{
+    visualBackSideShown = !visualBackSideShown;
+    visualYaw = visualBackSideShown ? 148 : -32;
+    visualApplyCamera();
+    visualUpdateBackToggle();
+  });
+  visualOverlay.querySelector('#wwVisualClose').addEventListener('click',closeVisualRack);
+  visualOverlay.addEventListener('click',(event)=>{if(event.target===visualOverlay)closeVisualRack();});
+  visualOverlay.querySelector('#wwAirflowToggle').addEventListener('change',renderVisualRack);
+  visualCapacity.addEventListener('change',()=>{rackCapacitySelect.value=visualCapacity.value;renderServerRack();renderVisualRack();});
+  rackCapacitySelect.addEventListener('change',()=>{visualCapacity.value=rackCapacitySelect.value;renderVisualRack();});
+  visualScale.addEventListener('input',renderVisualRack);
+  function visualRackUnitFromPointer(clientY) {
+    const rect = visualInner.getBoundingClientRect();
+    if (!rect.height) return 1;
+    const ratio = Math.max(0,Math.min(.9999,(clientY - rect.top) / rect.height));
+    const offset = visualSnapEnabled ? Math.floor(ratio * visualCapacityCount()) : Math.round(ratio * visualCapacityCount());
+    return Math.max(1,Math.min(visualCapacityCount(),visualCapacityCount() - offset));
+  }
+  visualInner.addEventListener('click',(event)=>{
+    if (!visualSelectedDeviceId || event.target.closest('.ww-3d-device')) return;
+    const device = [...state.devices.values()].find((item)=>String(item.id)===String(visualSelectedDeviceId));
+    if (!device) return;
+    visualPlaceDevice(device.id,visualRackUnitFromPointer(event.clientY));
+  });
+  visualScene.addEventListener('dragover',(event)=>{if(visualMode==='3d'&&event.dataTransfer){event.preventDefault();event.dataTransfer.dropEffect='move';}});
+  visualScene.addEventListener('drop',(event)=>{
+    if(visualMode!=='3d')return;
+    event.preventDefault();
+    const id=event.dataTransfer?.getData('text/x-serverwizard-device')||event.dataTransfer?.getData('text/plain');
+    if(id)visualPlaceDevice(id,visualRackUnitFromPointer(event.clientY));
+  });
+  visualScene.addEventListener('pointerdown',(event)=>{
+    if(visualMode!=='3d'||(event.button!==0&&event.button!==1))return;
+    const panGesture = event.button===1 || event.shiftKey;
+    if(!panGesture && event.target.closest('button,input,select,.ww-3d-device,.ww-3d-inner'))return;
+    visualDragging=true;visualDragMode=panGesture?'pan':'rotate';visualPointer={x:event.clientX,y:event.clientY};
+    visualScene.setPointerCapture?.(event.pointerId);visualScene.style.cursor=panGesture?'move':'grabbing';
+  });
+  visualScene.addEventListener('pointermove',(event)=>{
+    if(!visualDragging||!visualPointer)return;
+    const dx=event.clientX-visualPointer.x,dy=event.clientY-visualPointer.y;visualPointer={x:event.clientX,y:event.clientY};
+    if(visualDragMode==='pan'){visualPanX+=dx;visualPanY+=dy;}
+    else{visualYaw+=dx*.55;visualPitch=Math.max(-65,Math.min(30,visualPitch-dy*.35));}
+    visualApplyCamera();
+  });
+  visualScene.addEventListener('wheel',(event)=>{
+    if(visualMode!=='3d')return;
+    event.preventDefault();
+    visualScale.value=String(Math.max(8,Math.min(16,visualUnitSize()+(event.deltaY<0?1:-1))));
+    renderVisualRack();
+  },{passive:false});
+  visualScene.addEventListener('contextmenu',(event)=>event.preventDefault());
+  const stopVisualDrag=()=>{visualDragging=false;visualPointer=null;visualDragMode='rotate';visualScene.style.cursor='grab';};
+  visualScene.addEventListener('pointerup',stopVisualDrag);visualScene.addEventListener('pointercancel',stopVisualDrag);visualScene.addEventListener('lostpointercapture',stopVisualDrag);
+  document.addEventListener('keydown',(event)=>{if(event.key==='Escape'&&!visualOverlay.hidden)closeVisualRack();});
+  const originalRenderWithVisualRack = render;
+  render = function () {
+    originalRenderWithVisualRack();
+    rack3dButton.textContent=state.lang==='en'?'3D rack':'3D-Rack';
+    coolingButton.textContent=state.lang==='en'?'Cooling':'Kühlung';
+    rack3dButton.title=state.lang==='en'?'Open the 3D rack with individual chassis height and depth':'3D-Rack mit eigener Gerätehöhe und -tiefe öffnen';
+    coolingButton.title=state.lang==='en'?'Show airflow and estimated heat load':'Luftstrom und geschätzte Wärmelast anzeigen';
+    visualUpdateBackToggle();
+    if(!visualOverlay.hidden)renderVisualRack();
+  };
+  visualScene.style.cursor='grab';
+
+
+  renderWorkspaceTabs();
+})();
+<\/script>
+<script>
+(function () {
+  'use strict';
+
+  // Kabelfarbe pro Typ; die Farbe direkt am Kabel hat Vorrang
+  const cableTypeColorsStorageKey = 'wirewizard-cable-type-colors-v1';
+  const cableTypeColors = (() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(cableTypeColorsStorageKey) || '{}');
