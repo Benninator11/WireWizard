@@ -1,0 +1,500 @@
+    if (!item) return;
+    if (!confirm(`„${item.name}“ wirklich löschen?`)) return;
+    const wasActive = manager.activeId === id;
+    try {
+      if (wasActive) saveState();
+    } catch (err) {
+      console.warn('Zwischenstand nicht gespeichert:', err);
+    }
+    const active = current();
+    if (active) active.snapshot = readPlannerState();
+    manager.items = manager.items.filter((entry) => entry.id !== id);
+    if (wasActive) {
+      const next = manager.items[0];
+      restoreWorkspace(next);
+    } else {
+      saveManager();
+      renderWorkspaceTabs();
+    }
+  }
+
+  function renderWorkspaceTabs() {
+    bar.replaceChildren();
+    manager.items.forEach((item) => {
+      const tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = `workspace-tab${item.id === manager.activeId ? ' active' : ''}`;
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(item.id === manager.activeId));
+      tab.title = item.name;
+      tab.textContent = item.name;
+      tab.addEventListener('click', () => activateWorkspace(item.id));
+      if (manager.items.length > 1) {
+        const close = document.createElement('span');
+        close.className = 'workspace-close';
+        close.textContent = '×';
+        close.title = `${item.name} löschen`;
+        close.setAttribute('role', 'button');
+        close.setAttribute('aria-label', `${item.name} löschen`);
+        close.addEventListener('click', (event) => {
+          event.stopPropagation();
+          deleteWorkspace(item.id);
+        });
+        tab.appendChild(close);
+      }
+      bar.appendChild(tab);
+    });
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'workspace-add';
+    add.textContent = '+';
+    add.title = 'Neue Arbeitsfläche';
+    add.setAttribute('aria-label', 'Neue Arbeitsfläche hinzufügen');
+    add.addEventListener('click', createWorkspace);
+    bar.appendChild(add);
+  }
+
+  // Theme mit dem Schalter oben abgleichen.
+  const reportTheme = () => {
+    const theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    window.parent.postMessage({ type: 'planner-theme-change', theme }, '*');
+  };
+  new MutationObserver(reportTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  reportTheme();
+
+
+  // Signal-Trace: Klick auf ein Kabelende markiert die ganze Strecke
+  const signalTraceStyles = document.createElement('style');
+  signalTraceStyles.textContent = `
+    .cable-path.selected {
+      stroke-width: 7 !important;
+      filter: drop-shadow(0 0 4px rgba(34, 211, 238, .95)) drop-shadow(0 0 9px rgba(59, 130, 246, .85)) !important;
+      opacity: 1 !important;
+    }
+    .port.trace-endpoint {
+      z-index: 8 !important;
+      background: #22d3ee !important;
+      border-color: #ffffff !important;
+      box-shadow: 0 0 0 4px rgba(34, 211, 238, .35), 0 0 14px rgba(34, 211, 238, .95) !important;
+      animation: wirewizard-trace-pulse .7s ease-in-out infinite alternate;
+    }
+    @keyframes wirewizard-trace-pulse {
+      from { transform: translate(-50%, -50%) scale(1.08); }
+      to { transform: translate(-50%, -50%) scale(1.24); }
+    }
+  `;
+  document.head.appendChild(signalTraceStyles);
+
+  const renderDevicesBeforeSignalTrace = renderDevices;
+  renderDevices = function () {
+    renderDevicesBeforeSignalTrace();
+    const selectedCable = state.selectedCableId ? state.cables.get(state.selectedCableId) : null;
+    if (!selectedCable) return;
+    [
+      { deviceId: selectedCable.fromDeviceId, portId: selectedCable.fromPortId },
+      { deviceId: selectedCable.toDeviceId, portId: selectedCable.toPortId }
+    ].forEach((endpoint) => {
+      const portNode = document.querySelector(`.port[data-device-id="${endpoint.deviceId}"][data-port-id="${endpoint.portId}"]`);
+      if (portNode) portNode.classList.add('trace-endpoint');
+    });
+  };
+
+  const handlePortClickBeforeSignalTrace = handlePortClick;
+  handlePortClick = function (deviceId, portId) {
+    const device = getDeviceById(deviceId);
+    const port = getPortById(deviceId, portId);
+    if (port?.cableId && state.cables.has(port.cableId)) {
+      const cable = state.cables.get(port.cableId);
+      const fromDevice = getDeviceById(cable.fromDeviceId);
+      const toDevice = getDeviceById(cable.toDeviceId);
+      const fromPort = fromDevice && getPortById(fromDevice.id, cable.fromPortId);
+      const toPort = toDevice && getPortById(toDevice.id, cable.toPortId);
+      state.selectedPort = null;
+      state.selectedCableId = cable.id;
+      state.selectedDeviceId = null;
+      render();
+      const fromLabel = `${fromDevice ? fromDevice.name : 'Gerät'} · ${fromPort ? (fromPort.label || fromPort.type) : 'Port'}`;
+      const toLabel = `${toDevice ? toDevice.name : 'Gerät'} · ${toPort ? (toPort.label || toPort.type) : 'Port'}`;
+      showToast((state.lang === 'en' ? 'Signal trace: ' : 'Signal-Trace: ') + fromLabel + ' → ' + toLabel);
+      return;
+    }
+    if (state.selectedCableId) {
+      state.selectedCableId = null;
+      renderCables();
+    }
+    handlePortClickBeforeSignalTrace(deviceId, portId);
+  };
+
+
+
+  // Rack-Ansicht, die Position steht pro Gerät im gespeicherten Projekt
+  const rackViewStyles = document.createElement('style');
+  rackViewStyles.textContent = `
+    .server-rack-overlay { position: fixed; inset: 0; z-index: 120; display: flex; align-items: stretch; justify-content: center; padding: 18px; box-sizing: border-box; background: rgba(10, 18, 32, .62); overflow: auto; }
+    .server-rack-overlay[hidden] { display: none !important; }
+    .server-rack-panel { width: min(1240px, 100%); max-height: 100%; display: flex; flex-direction: column; color: var(--text, #1d2a39); background: var(--panel, #fff); border: 1px solid var(--border, #dfe7f6); border-radius: 14px; box-shadow: 0 24px 80px rgba(0,0,0,.28); overflow: hidden; }
+    .server-rack-header { display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding: 14px 16px; border-bottom:1px solid var(--border,#dfe7f6); background:var(--panel-soft,#eef3ff); }
+    .server-rack-heading { margin:0; font-size:18px; font-weight:750; }
+    .server-rack-heading small { display:block; margin-top:3px; color:var(--muted,#607086); font-size:12px; font-weight:500; }
+    .server-rack-controls { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-left:auto; }
+    .server-rack-controls label { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted,#607086); }
+    .server-rack-controls select, .server-rack-controls input { max-width:130px; color:var(--text,#1d2a39); background:var(--panel,#fff); border:1px solid var(--border,#dfe7f6); border-radius:6px; padding:6px; }
+    .server-rack-controls button, .rack-pool-card button { font:inherit; border:1px solid var(--border,#dfe7f6); border-radius:7px; padding:7px 10px; cursor:pointer; color:var(--text,#1d2a39); background:var(--panel,#fff); }
+    .server-rack-controls .rack-close { width:34px; height:34px; padding:0; font-size:22px; }
+    .server-rack-body { display:grid; grid-template-columns:minmax(440px, 1.35fr) minmax(240px, .75fr); gap:16px; padding:16px; overflow:auto; min-height:0; }
+    .server-rack-stage { min-width:0; border:1px solid var(--border,#dfe7f6); border-radius:10px; padding:12px; background:var(--bg,#f3f6fb); }
+    .server-rack-stage-title { display:flex; justify-content:space-between; align-items:center; gap:8px; font-weight:700; font-size:13px; margin-bottom:10px; }
+    .server-rack-stage-title span:last-child { color:var(--muted,#607086); font-size:11px; font-weight:500; }
+    .server-rack-scroll { overflow:auto; max-height:calc(100vh - 190px); padding:2px; }
+    .server-rack-chassis { display:grid; grid-template-columns:18px minmax(280px, 1fr) 18px; gap:5px; width:min(500px,100%); min-width:310px; margin:0 auto; padding:9px; box-sizing:border-box; border-radius:11px; border:1px solid #667481; background:linear-gradient(90deg,#647484,#c6d0d8 8%,#e5ebef 16%,#c7d1d9 84%,#697989); box-shadow: inset 0 0 0 2px rgba(255,255,255,.35), 0 8px 22px rgba(20,35,50,.18); }
+    .server-rack-rail { border-radius:5px; background:repeating-linear-gradient(to bottom,#243342 0 4px,#9ba8b3 4px 6px,var(--rack-background,#d9e0e6) 6px 14px); border:1px solid rgba(20,30,40,.38); }
+    .server-rack-core { position:relative; min-width:0; background:#23303b; border:2px solid #1e2933; border-radius:4px; overflow:hidden; }
+    .server-rack-units { position:relative; z-index:1; }
+    .server-rack-unit { display:flex; align-items:stretch; height:var(--rack-unit-height,28px); border-bottom:1px solid #687784; box-sizing:border-box; background:linear-gradient(90deg,#e9eef1,#f7fafb 45%,#d5dee4); color:#334155; }
+    .server-rack-unit:nth-child(even) { background:linear-gradient(90deg,#dce4e9,#edf2f5 45%,#cbd6dd); }
+    .server-rack-unit > span { flex:0 0 38px; display:flex; justify-content:center; align-items:center; border-right:1px solid #8796a2; color:#425260; font-size:10px; font-weight:750; user-select:none; }
+    .server-rack-unit-drop { flex:1; min-width:0; display:flex; align-items:center; justify-content:center; margin:2px 4px; border:1px dashed rgba(58,73,85,.16); border-radius:3px; color:rgba(42,58,70,.45); font-size:9px; cursor:pointer; }
+    .server-rack-unit-drop:hover, .server-rack-unit-drop.drag-over { background:rgba(34,211,238,.18); outline:2px solid #22d3ee; color:#0e7490; }
+    .server-rack-mounted { position:absolute; z-index:3; left:42px; right:4px; top:0; pointer-events:none; }
+    .server-rack-device { position:absolute; left:0; right:0; box-sizing:border-box; display:flex; align-items:center; gap:8px; padding:3px 8px; min-height:18px; border:1px solid rgba(8,24,38,.7); border-radius:3px; overflow:hidden; background:linear-gradient(180deg,#5e7484,#34495a); box-shadow:inset 0 1px rgba(255,255,255,.35),0 2px 3px rgba(0,0,0,.26); color:#f8fafc; cursor:grab; pointer-events:auto; }
+    .server-rack-device:active { cursor:grabbing; }
+    .server-rack-device.selected-to-place { outline:2px solid #22d3ee; box-shadow:0 0 0 3px rgba(34,211,238,.28),0 0 16px rgba(34,211,238,.4); }
+    .server-rack-device.kind-power { background:linear-gradient(180deg,#b97721,#854a0e); }
+    .server-rack-device.kind-network { background:linear-gradient(180deg,#3579a5,#20506f); }
+    .server-rack-device.kind-panel { background:linear-gradient(180deg,#687782,#414e58); }
+    .server-rack-device.kind-manager { background:linear-gradient(180deg,#168b8b,#12606d); }
+    .server-rack-device strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; }
+    .server-rack-device small { margin-left:auto; flex:0 0 auto; font-size:9px; opacity:.85; }
+    .server-rack-pool { min-width:0; border:1px solid var(--border,#dfe7f6); border-radius:10px; padding:12px; background:var(--panel,#fff); }
+    .server-rack-pool h3 { margin:0 0 4px; font-size:14px; }
+    .server-rack-pool p { margin:0 0 10px; font-size:11px; line-height:1.45; color:var(--muted,#607086); }
+    .server-rack-pool-list { display:flex; flex-direction:column; gap:7px; }
+    .rack-pool-card { display:flex; align-items:center; gap:8px; padding:8px; border:1px solid var(--border,#dfe7f6); border-radius:8px; background:var(--panel,#fff); cursor:pointer; }
+    .rack-pool-card.selected-to-place { border-color:#22d3ee; box-shadow:0 0 0 2px rgba(34,211,238,.2); background:var(--primary-soft,#eef3ff); }
+    .rack-pool-card-main { flex:1; min-width:0; }
+    .rack-pool-card strong { display:block; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .rack-pool-card small { display:block; margin-top:3px; color:var(--muted,#607086); font-size:10px; }
+    .rack-pool-card button { padding:3px 6px; font-size:11px; }
+    .server-rack-empty { padding:14px 8px; font-size:12px; color:var(--muted,#607086); text-align:center; }
+    .server-rack-note { margin-top:10px; font-size:11px; color:var(--muted,#607086); line-height:1.4; }
+    @media(max-width:760px) { .server-rack-overlay{padding:6px}.server-rack-body{grid-template-columns:1fr;padding:9px}.server-rack-header{padding:10px}.server-rack-controls{margin-left:0}.server-rack-scroll{max-height:48vh}.server-rack-heading{font-size:15px} }
+  `;
+  document.head.appendChild(rackViewStyles);
+
+  const rackButton = document.createElement('button');
+  rackButton.type = 'button';
+  rackButton.className = 'button';
+  rackButton.id = 'serverRackViewBtn';
+  rackButton.textContent = state.lang === 'en' ? 'Rack view' : 'Rack-Ansicht';
+  rackButton.title = state.lang === 'en' ? 'Open the rack layout' : 'Server im Rack anordnen';
+  const rackButtonParent = document.querySelector('.topbar-left');
+  if (rackButtonParent) {
+    const colorPicker = document.getElementById('cableColorPicker');
+    rackButtonParent.insertBefore(rackButton, colorPicker || null);
+  }
+
+  const rackOverlay = document.createElement('div');
+  rackOverlay.className = 'server-rack-overlay';
+  rackOverlay.hidden = true;
+  rackOverlay.setAttribute('role', 'dialog');
+  rackOverlay.setAttribute('aria-modal', 'true');
+  rackOverlay.setAttribute('aria-labelledby', 'serverRackHeading');
+  rackOverlay.innerHTML = `
+    <div class="server-rack-panel">
+      <header class="server-rack-header">
+        <h2 class="server-rack-heading" id="serverRackHeading">Rack-Ansicht <small>Geräte in Höheneinheiten (U/HE) anordnen</small></h2>
+        <div class="server-rack-controls">
+          <label for="serverRackCapacity">Schrank <select id="serverRackCapacity"><option value="24">24 U</option><option value="42" selected>42 U</option><option value="48">48 U</option></select></label>
+          <label for="serverRackScale">Größe <input id="serverRackScale" type="range" min="22" max="42" value="29" step="1"></label>
+          <button type="button" id="serverRackAddManager">+ Kabelorganisator</button>
+          <button type="button" class="rack-close" id="serverRackClose" aria-label="Rack-Ansicht schließen">×</button>
+        </div>
+      </header>
+      <div class="server-rack-body">
+        <section class="server-rack-stage">
+          <div class="server-rack-stage-title"><span id="serverRackStageTitle">42U-Server-Schrank</span><span>Ziehe Geräte auf die gewünschte Höheneinheit</span></div>
+          <div class="server-rack-scroll"><div class="server-rack-chassis">
+            <div class="server-rack-rail" aria-hidden="true"></div>
+            <div class="server-rack-core"><div class="server-rack-units" id="serverRackUnits"></div><div class="server-rack-mounted" id="serverRackMounted"></div></div>
+            <div class="server-rack-rail" aria-hidden="true"></div>
+          </div></div>
+          <div class="server-rack-note">Eine Einheit entspricht einer Rack-Unit (1 U). Die Höhe eines Geräts wird im Gerätefenster unter „Rack-Höhe (U/HE)“ eingestellt.</div>
+        </section>
+        <aside class="server-rack-pool">
+          <h3>Geräte zum Platzieren</h3>
+          <p>Wähle ein Gerät aus und klicke anschließend auf eine Rack-Unit, oder ziehe es direkt an die gewünschte Position. Bereits belegte Einheiten werden berücksichtigt.</p>
+          <div class="server-rack-pool-list" id="serverRackPool"></div>
+          <div class="server-rack-empty" id="serverRackEmpty" hidden>Keine Geräte vorhanden. Lege zuerst eines im ServerWizard an.</div>
+        </aside>
+      </div>
+    </div>`;
+  document.body.appendChild(rackOverlay);
+
+  const rackCapacitySelect = rackOverlay.querySelector('#serverRackCapacity');
+  const rackScaleInput = rackOverlay.querySelector('#serverRackScale');
+  const rackUnits = rackOverlay.querySelector('#serverRackUnits');
+  const rackMounted = rackOverlay.querySelector('#serverRackMounted');
+  const rackPool = rackOverlay.querySelector('#serverRackPool');
+  const rackEmpty = rackOverlay.querySelector('#serverRackEmpty');
+  let selectedRackDeviceId = null;
+
+  function serverRackCapacity() { return Math.max(1, Number(rackCapacitySelect.value) || 42); }
+  function serverRackUnitHeight() { return Math.max(22, Number(rackScaleInput.value) || 29); }
+  function serverRackHeight(device) { return Math.min(48, Math.max(1, Number(device.rackU) || 1)); }
+  function serverRackIsPowerDevice(device) { return /Rack-PDU|USV/i.test(String(device.type || '')); }
+  function serverRackKind(device) {
+    if (device.type === 'Kabelorganisator') return 'kind-manager';
+    if (serverRackIsPowerDevice(device)) return 'kind-power';
+    if (/Switch|Router|Firewall|Patchpanel|KVM/i.test(String(device.type || ''))) return /Patchpanel/i.test(device.type) ? 'kind-panel' : 'kind-network';
+    if (/Patchpanel/i.test(String(device.type || ''))) return 'kind-panel';
+    return '';
+  }
+  function serverRackPlacement(device, capacity = serverRackCapacity()) {
+    const start = Number(device.rackStartU);
+    const height = serverRackHeight(device);
+    if (!Number.isInteger(start) || start < 1 || start + height - 1 > capacity) return null;
+    return { start, top: start + height - 1, height };
+  }
+  function serverRackCanPlace(deviceId, start, capacity = serverRackCapacity()) {
+    const device = state.devices.get(deviceId);
+    if (!device) return false;
+    const height = serverRackHeight(device);
+    if (start < 1 || start + height - 1 > capacity) return false;
+    for (const other of state.devices.values()) {
+      if (other.id === deviceId) continue;
+      const otherPlacement = serverRackPlacement(other, capacity);
+      if (!otherPlacement) continue;
+      if (start <= otherPlacement.top && start + height - 1 >= otherPlacement.start) return false;
+    }
+    return true;
+  }
+  function serverRackPlace(deviceId, topUnit) {
+    const device = state.devices.get(deviceId);
+    if (!device) return;
+    const height = serverRackHeight(device);
+    const start = Number(topUnit) - height + 1;
+    if (start < 1) {
+      showToast(state.lang === 'en' ? 'Not enough rack units above the bottom.' : 'Das Gerät passt an dieser Position nicht vollständig in den Schrank.');
+      return;
+    }
+    if (!serverRackCanPlace(deviceId, start)) {
+      showToast(state.lang === 'en' ? 'These rack units are already occupied.' : 'Diese Rack-Units sind bereits belegt.');
+      return;
+    }
+    device.rackStartU = start;
+    selectedRackDeviceId = null;
+    saveState();
+    render();
+    renderServerRack();
+    showToast(state.lang === 'en' ? `${device.name} placed at U${start}–U${topUnit}.` : `${device.name} auf U${start}–U${topUnit} platziert.`);
+  }
+  function serverRackRemove(deviceId) {
+    const device = state.devices.get(deviceId);
+    if (!device) return;
+    delete device.rackStartU;
+    selectedRackDeviceId = deviceId;
+    saveState();
+    render();
+    renderServerRack();
+  }
+  function addRackCableManager() {
+    const id = uid('device');
+    const nameBase = state.lang === 'en' ? 'Cable manager' : 'Kabelorganisator';
+    const used = new Set([...state.devices.values()].map((device) => String(device.name || '').toLocaleLowerCase()));
+    let name = nameBase, number = 1;
+    while (used.has(name.toLocaleLowerCase())) { number++; name = `${nameBase} ${number}`; }
+    const position = randomPosition(190, 85);
+    const manager = {
+      id, name, description: state.lang === 'en' ? 'Rack cable guide' : 'Kabelführung für das Rack',
+      type: 'Kabelorganisator', storage: 0, storageUnit: 'GB', cpuModel: '', gpuModel: '', ramGb: 0,
+      cpuCores: 0, cpuClockGHz: 0, powerWatt: 0, rackU: 1, extraBaseHeight: 85, w: 190, h: 85,
+      x: position.x, y: position.y, ports: []
+    };
+    state.devices.set(id, manager);
+    state.selectedDeviceId = id;
+    selectedRackDeviceId = id;
+    saveState();
+    render();
+    renderServerRack();
+    showToast(state.lang === 'en' ? 'Cable manager added. Choose a rack unit.' : 'Kabelorganisator hinzugefügt. Wähle eine Rack-Unit.');
+  }
+  function renderServerRack() {
+    if (!rackOverlay || rackOverlay.hidden) return;
+    const capacity = serverRackCapacity();
+    const unitHeight = serverRackUnitHeight();
+    rackUnits.style.setProperty('--rack-unit-height', `${unitHeight}px`);
+    rackMounted.style.setProperty('--rack-unit-height', `${unitHeight}px`);
+    rackOverlay.querySelector('#serverRackHeading').firstChild.textContent = state.lang === 'en' ? 'Rack view ' : 'Rack-Ansicht ';
+    rackOverlay.querySelector('#serverRackHeading small').textContent = state.lang === 'en' ? 'Arrange equipment by rack unit (U)' : 'Geräte in Höheneinheiten (U/HE) anordnen';
+    rackOverlay.querySelector('.server-rack-stage-title span:first-child').textContent = `${capacity}U-${state.lang === 'en' ? 'server rack' : 'Server-Schrank'}`;
+    rackOverlay.querySelector('.server-rack-stage-title span:last-child').textContent = state.lang === 'en' ? 'Drag equipment to a rack unit' : 'Ziehe Geräte auf die gewünschte Höheneinheit';
+    rackOverlay.querySelector('.server-rack-note').textContent = state.lang === 'en'
+      ? 'One unit equals one rack unit (1U). Set device height in the device dialog under “Rack height (U)”.'
+      : 'Eine Einheit entspricht einer Rack-Unit (1 U). Die Höhe eines Geräts wird im Gerätefenster unter „Rack-Höhe (U/HE)“ eingestellt.';
+    rackOverlay.querySelector('.server-rack-pool h3').textContent = state.lang === 'en' ? 'Devices to place' : 'Geräte zum Platzieren';
+    rackOverlay.querySelector('.server-rack-pool p').textContent = state.lang === 'en'
+      ? 'Select a device and then click a rack unit, or drag it directly to a position. Occupied units are respected.'
+      : 'Wähle ein Gerät aus und klicke anschließend auf eine Rack-Unit, oder ziehe es direkt an die gewünschte Position. Bereits belegte Einheiten werden berücksichtigt.';
+    rackOverlay.querySelector('#serverRackAddManager').textContent = state.lang === 'en' ? '+ Cable manager' : '+ Kabelorganisator';
+    rackOverlay.querySelector('#serverRackClose').setAttribute('aria-label', state.lang === 'en' ? 'Close rack view' : 'Rack-Ansicht schließen');
+
+    rackUnits.replaceChildren();
+    rackMounted.replaceChildren();
+    for (let unit = capacity; unit >= 1; unit--) {
+      const row = document.createElement('div');
+      row.className = 'server-rack-unit';
+      row.dataset.unit = String(unit);
+      const label = document.createElement('span');
+      label.textContent = `${unit}U`;
+      const drop = document.createElement('div');
+      drop.className = 'server-rack-unit-drop';
+      drop.textContent = selectedRackDeviceId ? (state.lang === 'en' ? 'Place here' : 'Hier platzieren') : '';
+      drop.addEventListener('click', () => {
+        if (selectedRackDeviceId) serverRackPlace(selectedRackDeviceId, unit);
+      });
+      drop.addEventListener('dragover', (event) => { event.preventDefault(); drop.classList.add('drag-over'); });
+      drop.addEventListener('dragleave', () => drop.classList.remove('drag-over'));
+      drop.addEventListener('drop', (event) => {
+        event.preventDefault(); drop.classList.remove('drag-over');
+        const id = event.dataTransfer.getData('text/x-serverwizard-device') || event.dataTransfer.getData('text/plain');
+        if (id) serverRackPlace(id, unit);
+      });
+      row.append(label, drop);
+      rackUnits.appendChild(row);
+    }
+
+    const visiblePlaced = new Set();
+    state.devices.forEach((device) => {
+      const placement = serverRackPlacement(device, capacity);
+      if (!placement) return;
+      visiblePlaced.add(device.id);
+      const block = document.createElement('div');
+      block.className = `server-rack-device ${serverRackKind(device)}${selectedRackDeviceId === device.id ? ' selected-to-place' : ''}`.trim();
+      block.draggable = true;
+      block.style.top = `${(capacity - placement.top) * unitHeight + 2}px`;
+      block.style.height = `${Math.max(17, placement.height * unitHeight - 4)}px`;
+      block.title = `${device.name} · U${placement.start}–U${placement.top} · ${device.type}`;
+      const name = document.createElement('strong');
+      name.textContent = device.name || (state.lang === 'en' ? 'Device' : 'Gerät');
+      const type = document.createElement('small');
+      type.textContent = `${device.type} · ${placement.height}U`;
+      block.append(name, type);
+      block.addEventListener('dragstart', (event) => {
+        event.dataTransfer.setData('text/x-serverwizard-device', device.id);
+        event.dataTransfer.setData('text/plain', device.id);
+        event.dataTransfer.effectAllowed = 'move';
+      });
+      block.addEventListener('click', (event) => {
+        event.stopPropagation();
+        selectedRackDeviceId = device.id;
+        renderServerRack();
+      });
+      rackMounted.appendChild(block);
+    });
+
+    rackPool.replaceChildren();
+    const devices = [...state.devices.values()].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), state.lang === 'en' ? 'en' : 'de'));
+    rackEmpty.hidden = devices.length > 0;
+    devices.forEach((device) => {
+      const placement = serverRackPlacement(device, capacity);
+      const isSelected = selectedRackDeviceId === device.id;
+      const card = document.createElement('div');
+      card.className = 'rack-pool-card' + (isSelected ? ' selected-to-place' : '');
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.draggable = true;
+      const main = document.createElement('div');
+      main.className = 'rack-pool-card-main';
+      const name = document.createElement('strong');
+      name.textContent = device.name || (state.lang === 'en' ? 'Device' : 'Gerät');
+      const details = document.createElement('small');
+      details.textContent = placement
+        ? `${device.type} · U${placement.start}–U${placement.top}`
+        : `${device.type} · ${serverRackHeight(device)}U · ${state.lang === 'en' ? 'not placed' : 'nicht platziert'}`;
+      main.append(name, details);
+      card.appendChild(main);
+      card.addEventListener('click', () => {
+        selectedRackDeviceId = device.id;
+        renderServerRack();
+      });
+      card.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectedRackDeviceId = device.id; renderServerRack(); }
+      });
+      card.addEventListener('dragstart', (event) => {
+        event.dataTransfer.setData('text/x-serverwizard-device', device.id);
+        event.dataTransfer.setData('text/plain', device.id);
+        event.dataTransfer.effectAllowed = 'move';
+      });
+      if (placement) {
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = '×';
+        remove.title = state.lang === 'en' ? 'Remove from rack' : 'Aus dem Rack nehmen';
+        remove.setAttribute('aria-label', remove.title);
+        remove.addEventListener('click', (event) => { event.stopPropagation(); serverRackRemove(device.id); });
+        card.appendChild(remove);
+      }
+      rackPool.appendChild(card);
+    });
+    const placedCount = visiblePlaced.size;
+    const title = rackOverlay.querySelector('.server-rack-stage-title span:first-child');
+    title.textContent += ` · ${placedCount} ${state.lang === 'en' ? 'placed' : 'platziert'}`;
+  }
+
+  function openServerRack() {
+    rackOverlay.hidden = false;
+    rackButton.setAttribute('aria-pressed', 'true');
+    renderServerRack();
+  }
+  function closeServerRack() {
+    rackOverlay.hidden = true;
+    rackButton.setAttribute('aria-pressed', 'false');
+    selectedRackDeviceId = null;
+  }
+  rackButton.addEventListener('click', openServerRack);
+  rackOverlay.querySelector('#serverRackClose').addEventListener('click', closeServerRack);
+  rackOverlay.addEventListener('click', (event) => { if (event.target === rackOverlay) closeServerRack(); });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !rackOverlay.hidden) closeServerRack(); });
+  rackCapacitySelect.addEventListener('change', renderServerRack);
+  rackScaleInput.addEventListener('input', renderServerRack);
+  rackOverlay.querySelector('#serverRackAddManager').addEventListener('click', addRackCableManager);
+
+  const renderBeforeRackView = render;
+  render = function () {
+    renderBeforeRackView();
+    if (rackOverlay && !rackOverlay.hidden) renderServerRack();
+    rackButton.textContent = state.lang === 'en' ? 'Rack view' : 'Rack-Ansicht';
+    rackButton.title = state.lang === 'en' ? 'Open the rack layout' : 'Server im Rack anordnen';
+  };
+
+
+  // 3D-Schrank mit grober Luftstrom-/Wärmeansicht (optional)
+  const visualStyle = document.createElement('style');
+  visualStyle.textContent = `
+    .ww-visual-button { white-space:nowrap; }
+    .ww-rack-visual-overlay { position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; padding:14px; background:rgba(13,22,34,.62); }
+    .ww-rack-visual-overlay[hidden],.ww-visual-panel [hidden] { display:none!important; }
+    .ww-visual-panel { display:flex; flex-direction:column; width:min(1200px,98vw); max-height:94vh; overflow:hidden; background:var(--panel,#fff); color:var(--text,#1d2a39); border:1px solid var(--border,#dfe7f6); border-radius:14px; box-shadow:0 28px 80px rgba(0,0,0,.32); }
+    .ww-visual-header { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; padding:14px 16px; border-bottom:1px solid var(--border,#dfe7f6); background:var(--panel-soft,#eef3ff); }
+    .ww-visual-title { margin:0; font-size:18px; font-weight:800; }
+    .ww-visual-subtitle { margin:4px 0 0; color:var(--muted,#607086); font-size:11px; }
+    .ww-visual-controls { display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+    .ww-visual-controls button,.ww-visual-controls select,.ww-visual-controls input { font:inherit; font-size:12px; padding:7px 9px; border:1px solid var(--border,#dfe7f6); border-radius:7px; color:var(--text,#1d2a39); background:var(--panel,#fff); }
+    .ww-visual-controls button { cursor:pointer; }
+    .ww-visual-controls .active { background:var(--primary,#2f6fed); color:#fff; border-color:var(--primary,#2f6fed); }
+    .ww-visual-close { font-size:20px!important; min-width:36px; }
+    .ww-visual-body { display:grid; grid-template-columns:minmax(0,1fr) 260px; gap:14px; padding:14px; overflow:auto; min-height:0; }
+    .ww-visual-stage { min-width:0; min-height:420px; border:1px solid var(--border,#dfe7f6); border-radius:12px; overflow:auto; position:relative; background:radial-gradient(ellipse at 50% 42%,var(--panel,#fff),var(--bg,#f3f6fb)); }
+    .ww-3d-instructions { position:sticky; top:0; z-index:4; display:flex; justify-content:space-between; gap:10px; padding:8px 10px; color:var(--muted,#607086); font-size:11px; background:color-mix(in srgb,var(--panel,#fff) 87%,transparent); }
+    .ww-3d-scene { min-width:500px; min-height:560px; height:100%; display:flex; align-items:center; justify-content:center; padding:38px 100px 65px 55px; perspective:720px; perspective-origin:50% 48%; overflow:visible; touch-action:none; }
+    /* Quader aus einzelnen 3D-Flächen (vorne/hinten, Seiten, Dach, Boden) */
+    .ww-3d-cabinet { --cabinet-depth:290px; --cabinet-half-depth:145px; --cabinet-height:462px; position:relative; flex:0 0 300px; width:300px; height:var(--cabinet-height); transform-style:preserve-3d; transform:rotateX(-21deg) rotateY(-38deg); transform-origin:50% 50% 0; transition:box-shadow .2s; box-shadow:20px 26px 34px rgba(15,25,38,.25); }
+    .ww-3d-front { position:absolute; inset:0; overflow:visible; box-sizing:border-box; border:8px solid #8b99a5; border-radius:5px; background:linear-gradient(90deg,#9eabb5,#edf1f4 7%,#b9c4cc 11%,#202a34 12%,#111820 88%,#b8c3cb 90%,#edf1f4 94%,#8b99a5); box-shadow:inset 0 0 0 2px rgba(255,255,255,.6),inset 0 0 16px rgba(0,0,0,.42); transform:translateZ(var(--cabinet-half-depth)); transform-style:preserve-3d; backface-visibility:hidden; }
+    .ww-3d-back { position:absolute; inset:0; box-sizing:border-box; overflow:hidden; border:8px solid #71818d; border-radius:5px; background:repeating-linear-gradient(to bottom,#24323d 0 18px,#40525f 18px 20px,#17222c 20px 24px); box-shadow:inset 0 0 24px rgba(0,0,0,.65); transform:rotateY(180deg) translateZ(var(--cabinet-half-depth)); backface-visibility:hidden; }
+    .ww-3d-rear-svg { position:absolute; inset:0; display:block; width:100%; height:100%; overflow:hidden; pointer-events:none; }
+    .ww-3d-rear-svg text { font-family:Arial,Helvetica,sans-serif; user-select:none; }
+    .ww-3d-side,.ww-3d-left { position:absolute; top:0; left:calc(50% - var(--cabinet-half-depth)); width:var(--cabinet-depth); height:100%; box-sizing:border-box; border:2px solid #647583; background:linear-gradient(90deg,rgba(4,12,19,.48),rgba(104,126,141,.62) 16%,rgba(37,54,66,.94) 52%,rgba(9,18,26,.7)),repeating-linear-gradient(to bottom,#364955 0 18px,#536875 18px 20px,#293943 20px 24px); box-shadow:inset 0 0 20px rgba(0,0,0,.45); backface-visibility:visible; }
+    .ww-3d-side { transform:translateX(150px) rotateY(90deg); }
+    .ww-3d-left { transform:translateX(-150px) rotateY(-90deg); }
+    .ww-3d-top,.ww-3d-bottom { position:absolute; left:0; width:100%; height:var(--cabinet-depth); box-sizing:border-box; border:2px solid #84939e; background:repeating-linear-gradient(90deg,rgba(255,255,255,.12) 0 2px,transparent 2px 14px),linear-gradient(135deg,#d2dbe1,#778995 48%,#aebbc4); box-shadow:inset 0 0 14px rgba(0,0,0,.2); backface-visibility:visible; }
+    .ww-3d-top { top:0; transform:translateY(-50%) rotateX(90deg); }
