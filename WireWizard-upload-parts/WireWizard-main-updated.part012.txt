@@ -1,0 +1,500 @@
+        "AMD Radeon PRO Vega II Duo",
+        "AMD FirePro S9170",
+        "AMD FirePro V7900",
+        "AMD FirePro V5900",
+        "AMD FirePro V4900",
+        "AMD FirePro V3900",
+        "Intel Arc Pro A40M",
+        "Apple M1 GPU 7-core",
+        "Apple M1 GPU 8-core",
+        "Apple M1 Pro GPU 14-core",
+        "Apple M1 Pro GPU 16-core",
+        "Apple M1 Max GPU 24-core",
+        "Apple M1 Max GPU 32-core",
+        "Apple M2 GPU 8-core",
+        "Apple M2 GPU 10-core",
+        "Apple M2 Pro GPU 16-core",
+        "Apple M2 Pro GPU 19-core",
+        "Apple M2 Max GPU 30-core",
+        "Apple M2 Max GPU 38-core",
+        "Apple M3 GPU 8-core",
+        "Apple M3 GPU 10-core",
+        "Apple M3 Pro GPU 14-core",
+        "Apple M3 Pro GPU 18-core",
+        "Apple M3 Max GPU 30-core",
+        "Apple M3 Max GPU 40-core",
+        "Apple M4 GPU 8-core",
+        "Apple M4 GPU 10-core",
+        "Apple M4 Pro GPU 16-core",
+        "Apple M4 Pro GPU 20-core",
+        "Apple M4 Max GPU 32-core"
+];;
+      const portCatalog = [
+        'LAN', 'USB', 'HDMI', 'DisplayPort', 'Serial', 'Schuko', 'IEC C13', 'IEC C14',
+        'IEC C19', 'IEC C20', 'SFP', 'SFP+', 'SAS', 'Fibre Channel', 'InfiniBand', 'QSFP28', 'QSFP56', 'USB-C', 'Sonstiges'
+      ];
+
+      const cableTypes = [
+        'LAN', 'Cat6', 'Fiber', 'DAC', 'USB', 'HDMI', 'DisplayPort', 'Strom', 'Stromkabel',
+        'SFP', 'SAS', 'Fibre Channel', 'InfiniBand', 'QSFP28', 'QSFP56', 'Serial', 'Sonstiges'
+      ];
+
+      const cableColors = {
+        LAN: '#2f6fed',
+        Cat6: '#2563eb',
+        Fiber: '#d946ef',
+        DAC: '#0d9488',
+        PoE: '#16835d',
+        USB: '#dfe3ea',
+        Thunderbolt: '#27272a',
+        HDMI: '#111827',
+        DisplayPort: '#2c7be5',
+        VGA: '#1f77b4',
+        Audio: '#d64b4b',
+        Strom: '#f59e0b',
+        Stromkabel: '#d97706',
+        'USB-PD': '#ef4444',
+        'dc-in': '#f97316',
+        Lightning: '#f9a8d4',
+        SFP: '#2dd4bf',
+        SAS: '#8b5cf6',
+        'Fibre Channel': '#e11d48',
+        InfiniBand: '#0891b2',
+        QSFP28: '#65a30d',
+        QSFP56: '#c2410c',
+        SD: '#facc15',
+        DVI: '#737373',
+        'PS/2': '#a855f7',
+        Serial: '#64748b',
+        Parallel: '#78716c',
+        CF: '#2f855a',
+        CFexpress: '#16a34a',
+        Sonstiges: '#7c8aa5'
+      };
+
+      const deviceTypes = [
+        'Rack-Server', 'Compute-Server', 'GPU-Server', 'Storage-Server', 'JBOD', 'SAN-Array', 'NAS',
+        'Server-Switch', 'Core-Switch', 'Fibre-Channel-Switch', 'Router', 'Firewall', 'Load-Balancer',
+        'Rack-PDU', 'USV', 'Patchpanel', 'KVM-Switch', 'Console-Server', 'Backup-Server',
+        'Tape-Library', 'Rack-Kühler', 'Management-Server', 'Kabelorganisator', 'Sonstiges Servergerät', 'Gaming-PC', 'Gaming-Mini-PC', 'Gaming-Laptop'
+      ];
+      const hardwareSpecTypes = new Set([
+        'Rack-Server', 'Compute-Server', 'GPU-Server', 'Storage-Server', 'SAN-Array', 'NAS',
+        'Server-Switch', 'Core-Switch', 'Fibre-Channel-Switch', 'Router', 'Firewall', 'Load-Balancer',
+        'KVM-Switch', 'Console-Server', 'Backup-Server', 'Tape-Library', 'Management-Server', 'Gaming-PC', 'Gaming-Mini-PC', 'Gaming-Laptop'
+      ]);
+      const gpuSpecTypes = new Set(['GPU-Server', 'Gaming-PC', 'Gaming-Mini-PC', 'Gaming-Laptop']);
+
+      const deviceTypeEnglishLabels = {
+        'Rack-Server': 'Rack server',
+        'Compute-Server': 'Compute server',
+        'GPU-Server': 'GPU server',
+        'Storage-Server': 'Storage server',
+        JBOD: 'JBOD disk shelf',
+        'SAN-Array': 'SAN storage array',
+        NAS: 'Network storage',
+        'Server-Switch': 'Top-of-rack switch',
+        'Core-Switch': 'Core switch',
+        'Fibre-Channel-Switch': 'Fibre Channel switch',
+        Router: 'Router',
+        Firewall: 'Firewall',
+        'Load-Balancer': 'Load balancer',
+        'Rack-PDU': 'Rack PDU',
+        USV: 'UPS',
+        Patchpanel: 'Patch panel',
+        'KVM-Switch': 'KVM switch',
+        'Console-Server': 'Console server',
+        'Backup-Server': 'Backup server',
+        'Tape-Library': 'Tape library',
+        'Rack-Kühler': 'Rack cooling unit',
+        'Kabelorganisator': 'Cable manager',
+        'Management-Server': 'Management server',
+        'Sonstiges Servergerät': 'Other server equipment',
+      };
+
+      const defaultPowerWattByType = {
+        'Rack-Server': 600,
+        'Compute-Server': 800,
+        'GPU-Server': 2000,
+        'Storage-Server': 750,
+        JBOD: 450,
+        'SAN-Array': 1200,
+        NAS: 120,
+        'Server-Switch': 250,
+        'Core-Switch': 500,
+        'Fibre-Channel-Switch': 300,
+        Router: 80,
+        Firewall: 120,
+        'Load-Balancer': 150,
+        'Rack-PDU': 0,
+        USV: 80,
+        Patchpanel: 0,
+        'KVM-Switch': 35,
+        'Console-Server': 40,
+        'Backup-Server': 600,
+        'Tape-Library': 300,
+        'Rack-Kühler': 500,
+        'Kabelorganisator': 0,
+        'Management-Server': 80,
+        'Sonstiges Servergerät': 100,
+      };
+
+      const devicePortPresets = {
+        'Rack-Server': [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'LAN', side: 'right', speed: '10 GbE', amount: 2 },
+          { type: 'SFP+', side: 'right', amount: 2 },
+          { type: 'USB', side: 'right', speed: '3.0', amount: 2 },
+        ],
+        'Compute-Server': [
+          { type: 'IEC C14', side: 'left', amount: 2 },
+          { type: 'LAN', side: 'right', speed: '10 GbE', amount: 2 },
+          { type: 'InfiniBand', side: 'right', amount: 2 },
+        ],
+        'GPU-Server': [
+          { type: 'IEC C19', side: 'left', amount: 2 },
+          { type: 'LAN', side: 'right', speed: '10 GbE', amount: 2 },
+          { type: 'QSFP56', side: 'right', amount: 4 },
+        ],
+        'Storage-Server': [
+          { type: 'IEC C14', side: 'left', amount: 2 },
+          { type: 'SAS', side: 'right', amount: 2 },
+          { type: 'Fibre Channel', side: 'right', amount: 2 },
+          { type: 'LAN', side: 'right', speed: '10 GbE', amount: 2 },
+        ],
+        JBOD: [
+          { type: 'IEC C14', side: 'left', amount: 2 },
+          { type: 'SAS', side: 'right', amount: 4 },
+          { type: 'LAN', side: 'right', speed: '1 GbE' },
+        ],
+        'SAN-Array': [
+          { type: 'IEC C19', side: 'left', amount: 2 },
+          { type: 'Fibre Channel', side: 'right', amount: 4 },
+          { type: 'SAS', side: 'right', amount: 2 },
+          { type: 'LAN', side: 'right', speed: '1 GbE', amount: 2 },
+        ],
+        NAS: [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'LAN', side: 'right', speed: '10 GbE', amount: 2 },
+          { type: 'USB', side: 'right', speed: '3.0', amount: 2 },
+        ],
+        'Server-Switch': [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'LAN', side: 'left', speed: '10 GbE', amount: 12 },
+          { type: 'LAN', side: 'right', speed: '10 GbE', amount: 12 },
+          { type: 'SFP+', side: 'top', amount: 4 },
+        ],
+        'Core-Switch': [
+          { type: 'IEC C19', side: 'left' },
+          { type: 'LAN', side: 'left', speed: '10 GbE', amount: 8 },
+          { type: 'LAN', side: 'right', speed: '10 GbE', amount: 8 },
+          { type: 'QSFP56', side: 'top', amount: 8 },
+        ],
+        'Fibre-Channel-Switch': [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'Fibre Channel', side: 'left', amount: 12 },
+          { type: 'Fibre Channel', side: 'right', amount: 12 },
+          { type: 'LAN', side: 'top', speed: '1 GbE' },
+        ],
+        Router: [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'LAN', side: 'right', speed: '10 GbE', amount: 4 },
+          { type: 'SFP+', side: 'top', amount: 2 },
+        ],
+        Firewall: [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'LAN', side: 'right', speed: '10 GbE', amount: 8 },
+          { type: 'SFP+', side: 'top', amount: 2 },
+        ],
+        'Load-Balancer': [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'LAN', side: 'right', speed: '10 GbE', amount: 4 },
+          { type: 'SFP+', side: 'top', amount: 2 },
+        ],
+        'Rack-PDU': [{ type: 'IEC C20', side: 'left' }],
+        USV: [{ type: 'IEC C20', side: 'left' }],
+        Patchpanel: [
+          { type: 'LAN', side: 'left', speed: '1 GbE', amount: 12 },
+          { type: 'LAN', side: 'right', speed: '1 GbE', amount: 12 },
+        ],
+        'KVM-Switch': [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'HDMI', side: 'right', amount: 4 },
+          { type: 'USB', side: 'right', speed: '2.0', amount: 4 },
+          { type: 'LAN', side: 'top', speed: '1 GbE' },
+        ],
+        'Console-Server': [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'Serial', side: 'right', amount: 16 },
+          { type: 'LAN', side: 'top', speed: '1 GbE', amount: 2 },
+        ],
+        'Backup-Server': [
+          { type: 'IEC C14', side: 'left', amount: 2 },
+          { type: 'SAS', side: 'right', amount: 4 },
+          { type: 'LAN', side: 'right', speed: '10 GbE', amount: 2 },
+          { type: 'Fibre Channel', side: 'top', amount: 2 },
+        ],
+        'Tape-Library': [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'SAS', side: 'right', amount: 2 },
+          { type: 'Fibre Channel', side: 'right', amount: 2 },
+          { type: 'LAN', side: 'top', speed: '1 GbE' },
+        ],
+        'Rack-Kühler': [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'LAN', side: 'right', speed: '1 GbE' },
+        ],
+        'Kabelorganisator': [],
+        'Management-Server': [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'LAN', side: 'right', speed: '1 GbE', amount: 2 },
+          { type: 'Serial', side: 'right', amount: 2 },
+          { type: 'USB', side: 'top', speed: '2.0', amount: 2 },
+        ],
+        'Sonstiges Servergerät': [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'LAN', side: 'right', speed: '1 GbE' },
+          { type: 'USB', side: 'right', speed: '3.0' },
+        ],
+        'Gaming-PC': [
+          { type: 'IEC C14', side: 'left' },
+          { type: 'LAN', side: 'right', speed: '2.5 GbE', amount: 1 },
+          { type: 'USB', side: 'right', speed: 'USB 3.2', amount: 6 },
+          { type: 'DisplayPort', side: 'right', amount: 2 },
+          { type: 'HDMI', side: 'right', amount: 1 }
+        ],
+        'Gaming-Mini-PC': [
+          { type: 'USB-C', side: 'right', amount: 2 },
+          { type: 'USB', side: 'right', speed: 'USB 3.2', amount: 3 },
+          { type: 'HDMI', side: 'right', amount: 2 },
+          { type: 'LAN', side: 'right', speed: '2.5 GbE', amount: 1 },
+          { type: 'DC', side: 'left', amount: 1 }
+        ],
+        'Gaming-Laptop': [
+          { type: 'USB-C', side: 'right', amount: 2 },
+          { type: 'USB', side: 'right', speed: 'USB 3.2', amount: 2 },
+          { type: 'HDMI', side: 'right', amount: 1 },
+          { type: 'LAN', side: 'right', speed: '2.5 GbE', amount: 1 },
+          { type: 'DC', side: 'left', amount: 1 }
+        ],
+      };
+
+      const powerPortTypes = new Set(['schuko', 'iec c13', 'iec c14', 'iec c19', 'iec c20', 'usb', 'usb-c']);
+      const powerDistributionTypes = new Set(['Steckdose', 'Steckdosenleiste', 'Rack-PDU', 'USV']);
+
+      const strings = {
+        de: {
+          addDevice: 'Gerät hinzufügen',
+          deleteSelection: 'Löschen',
+          cableType: 'Kabeltyp',
+          devices: 'Servergeräte',
+          power: 'Rack-Leistung',
+          device: 'Servergerät',
+          save: 'Speichern',
+          cancel: 'Abbrechen',
+          deviceDelete: 'Gerät löschen',
+          close: 'Schließen',
+          name: 'Name',
+          type: 'Typ',
+          description: 'Beschreibung',
+          storage: 'Speicherkapazität',
+          powerWatt: 'Leistungsaufnahme (W)',
+          color: 'Farbe',
+          ports: 'Anschlüsse',
+          jsonExport: 'JSON-Export',
+          jsonImport: 'JSON-Import',
+          warnOverLimit: 'Rack-Leistungsgrenze überschritten',
+          deviceNameRequired: 'Bitte gib einen Namen für dein Servergerät ein.',
+          selfConnectionBlocked: 'Selbstverbindung wird verhindert.',
+          occupiedPort: 'Dieser Port ist bereits belegt.',
+          incompatibleCable: 'Diese Ports sind nicht kompatibel.',
+          missingPowerPort: 'Jedes Gerät braucht einen Strom- oder USB-Anschluss; Netzwerkgeräte bis 100 W können LAN nutzen.',
+          removeOutletCableFirst: 'Bitte zuerst die Kabel der zu entfernenden Stromausgänge trennen.',
+          noDeviceSelected: 'Kein Gerät ausgewählt.',
+          imported: 'JSON importiert.',
+          invalidJson: 'Ungültiges JSON-Format.',
+          saved: 'Gespeichert.',
+          selectionDeleted: 'Auswahl gelöscht.',
+          darkMode: 'Dunkelmodus',
+          lightMode: 'Hellmodus',
+          zoomIn: 'Vergrößern',
+          zoomOut: 'Verkleinern',
+          info: 'Info'
+        },
+        en: {
+          addDevice: 'Add device',
+          deleteSelection: 'Delete',
+          cableType: 'Cable type',
+          devices: 'Server equipment',
+          power: 'Rack power',
+          device: 'Server device',
+          save: 'Save',
+          cancel: 'Cancel',
+          deviceDelete: 'Delete device',
+          close: 'Close',
+          name: 'Name',
+          type: 'Type',
+          description: 'Description',
+          storage: 'Storage capacity',
+          powerWatt: 'Power draw (W)',
+          color: 'Color',
+          ports: 'Ports',
+          jsonExport: 'Export JSON',
+          jsonImport: 'Import JSON',
+          warnOverLimit: 'Rack power limit exceeded',
+          deviceNameRequired: 'Please enter a name for your server device.',
+          selfConnectionBlocked: 'Self-connections are prevented.',
+          occupiedPort: 'This port is already occupied.',
+          incompatibleCable: 'These ports are not compatible.',
+          missingPowerPort: 'Every device needs a power or USB connector; network devices up to 100 W can use LAN.',
+          removeOutletCableFirst: 'Disconnect cables from power outputs before reducing their number.',
+          noDeviceSelected: 'No device selected.',
+          imported: 'JSON imported.',
+          invalidJson: 'Invalid JSON format.',
+          saved: 'Saved.',
+          selectionDeleted: 'Selection deleted.',
+          darkMode: 'Dark mode',
+          lightMode: 'Light mode',
+          zoomIn: 'Zoom in',
+          zoomOut: 'Zoom out',
+          info: 'Info'
+        }
+      };
+
+      const state = {
+        lang: 'de',
+        theme: 'light',
+        zoom: 1,
+        devices: new Map(),
+        cables: new Map(),
+        selectedCableType: 'LAN',
+        selectedPort: null,
+        selectedDeviceId: null,
+        hoveredDeviceId: null,
+        selectedCableId: null,
+        openDeviceId: null,
+        maxPowerWatt: MAX_POWER_WATT,
+        nextCounter: 1,
+      };
+
+      // häufig genutzte DOM-Elemente
+      const ui = {
+        canvas: document.getElementById('canvas'),
+        canvasContent: document.getElementById('canvasContent'),
+        deviceLayer: document.getElementById('deviceLayer'),
+        cableLayer: document.getElementById('cableLayer'),
+        cableColorPicker: document.getElementById('cableColorPicker'),
+        deviceList: document.getElementById('deviceList'),
+        cableTypeSelect: document.getElementById('cableTypeSelect'),
+        powerFill: document.getElementById('powerFill'),
+        powerLabel: document.getElementById('powerLabel'),
+        powerWrap: document.getElementById('powerWrap'),
+        themeToggleBtn: document.getElementById('themeToggleBtn'),
+        themeToggleLabel: document.getElementById('themeToggleLabel'),
+        zoomOutBtn: document.getElementById('zoomOutBtn'),
+        zoomInBtn: document.getElementById('zoomInBtn'),
+        zoomLevel: document.getElementById('zoomLevel'),
+        modal: document.getElementById('deviceModal'),
+        modalTitle: document.getElementById('modalTitle'),
+        deviceForm: document.getElementById('deviceForm'),
+        deleteDeviceBtn: document.getElementById('deleteDeviceBtn'),
+        closeModalBtn: document.getElementById('closeModalBtn'),
+        cancelDeviceBtn: document.getElementById('cancelDeviceBtn'),
+        importFileInput: document.getElementById('importFileInput'),
+        toast: document.getElementById('toast'),
+        cableTooltip: document.getElementById('cableTooltip'),
+        portConfig: document.getElementById('portConfig'),
+        deviceName: document.getElementById('deviceName'),
+        deviceType: document.getElementById('deviceType'),
+        deviceDescription: document.getElementById('deviceDescription'),
+        deviceStorageValue: document.getElementById('deviceStorageValue'),
+        deviceStorageUnit: document.getElementById('deviceStorageUnit'),
+        devicePowerWatt: document.getElementById('devicePowerWatt'),
+        outletCountField: document.getElementById('outletCountField'),
+        outletCountInput: document.getElementById('outletCountInput'),
+        cpuModelField: document.getElementById('cpuModelField'),
+        cpuModel: document.getElementById('deviceCpuModel'),
+        ramField: document.getElementById('ramField'),
+        ramTypeField: document.getElementById('ramTypeField'),
+        ramType: document.getElementById('deviceRamType'),
+        ramGb: document.getElementById('deviceRamGb'),
+        cpuCoresField: document.getElementById('cpuCoresField'),
+        cpuCores: document.getElementById('deviceCpuCores'),
+        cpuClockField: document.getElementById('cpuClockField'),
+        cpuClockGHz: document.getElementById('deviceCpuClockGHz'),
+        gpuModelField: document.getElementById('gpuModelField'),
+        gpuModel: document.getElementById('deviceGpuModel'),
+        gpuCountField: document.getElementById('gpuCountField'),
+        gpuCount: document.getElementById('deviceGpuCount'),
+      };
+
+      // kleine Helfer: IDs, Übersetzung, Toast
+      function uid(prefix = 'id') {
+        const value = state.nextCounter++;
+        return `${prefix}-${value}`;
+      }
+
+      function t(key) {
+        return strings[state.lang][key] || key;
+      }
+
+      function getDeviceTypeLabel(deviceType) {
+        return state.lang === 'en' ? deviceTypeEnglishLabels[deviceType] || deviceType : deviceType;
+      }
+
+      function showToast(message) {
+        ui.toast.textContent = message;
+        ui.toast.classList.add('show');
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(() => ui.toast.classList.remove('show'), 1800);
+      }
+
+      function saveState() {
+        const payload = {
+          lang: state.lang,
+          theme: state.theme,
+          zoom: state.zoom,
+          devices: Array.from(state.devices.values()),
+          cables: Array.from(state.cables.values()),
+          selectedCableType: state.selectedCableType,
+          nextCounter: state.nextCounter,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      }
+
+      function loadState() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        try {
+          const parsed = JSON.parse(raw);
+          if (!parsed || !Array.isArray(parsed.devices)) return;
+          state.lang = parsed.lang || 'de';
+          state.theme = parsed.theme === 'dark' ? 'dark' : 'light';
+          state.zoom = Number.isFinite(Number(parsed.zoom)) ? clamp(Number(parsed.zoom), MIN_ZOOM, MAX_ZOOM) : 1;
+          state.selectedCableType = parsed.selectedCableType || 'LAN';
+          state.nextCounter = Number(parsed.nextCounter || 1);
+          state.devices = new Map((parsed.devices || []).map((device) => [device.id, device]));
+          state.cables = new Map((parsed.cables || []).map((cable) => [cable.id, cable]));
+        } catch (err) {
+          console.error('Stand konnte nicht geladen werden:', err);
+        }
+      }
+
+      function ensurePortCableIds() {
+        state.devices.forEach((device) => {
+          device.ports.forEach((port) => {
+            const related = [...state.cables.values()].find((cable) => {
+              return (cable.fromDeviceId === device.id && cable.fromPortId === port.id) || (cable.toDeviceId === device.id && cable.toPortId === port.id);
+            });
+            port.cableId = related ? related.id : null;
+          });
+        });
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function isPowerPort(portType) {
+        return powerPortTypes.has((portType || '').trim().toLowerCase());
+      }
