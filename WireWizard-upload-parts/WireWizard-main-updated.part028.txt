@@ -1,0 +1,500 @@
+        else if (/\brx\s*8700\s*xt\b/.test(name)) watts = 250;
+        else if (/\brx\s*7900\s*xtx\b/.test(name)) watts = 355;
+        else if (/\brx\s*7900\s*xt\b/.test(name)) watts = 315;
+        else if (/\brx\s*7900\s*gre\b/.test(name)) watts = 260;
+        else if (/\brx\s*7800\s*xt\b/.test(name)) watts = 263;
+        else if (/\brx\s*7700\s*xt\b/.test(name)) watts = 245;
+        else if (/\brx\s*7600\s*xt\b/.test(name)) watts = 190;
+        else if (/\brx\s*7600\b/.test(name)) watts = 165;
+        else if (/\brx\s*6950\s*xt\b/.test(name)) watts = 335;
+        else if (/\brx\s*6900\s*xt\b/.test(name)) watts = 300;
+        else if (/\brx\s*6800\s*xt\b/.test(name)) watts = 300;
+        else if (/\brx\s*6800\b/.test(name)) watts = 250;
+        else if (/\brx\s*6750\s*xt\b/.test(name)) watts = 250;
+        else if (/\brx\s*6700\s*xt\b/.test(name)) watts = 230;
+        else if (/\brx\s*6650\s*xt\b/.test(name)) watts = 180;
+        else if (/\brx\s*6600\s*xt\b/.test(name)) watts = 160;
+        else if (/\brx\s*6600\b/.test(name)) watts = 132;
+        else if (/\brx\s*6500\s*xt\b/.test(name)) watts = 107;
+        else if (/\brx\s*580\b/.test(name)) watts = 185;
+        else if (/\brx\s*570\b/.test(name)) watts = 150;
+        else if (/\brx\s*560\b/.test(name)) watts = 80;
+        else if (/\brx\s*480\b/.test(name)) watts = 150;
+        else if (/\brx\s*470\b/.test(name)) watts = 120;
+        else if (/\brx\s*vega\s*64\b/.test(name)) watts = 295;
+        else if (/\brx\s*vega\s*56\b/.test(name)) watts = 210;
+        else if (/\bradeon vii\b/.test(name)) watts = 300;
+        else if (/\bradeon pro w7900\b/.test(name)) watts = 295;
+        else if (/\bradeon pro w7800\b/.test(name)) watts = 260;
+        else if (/\bradeon pro w6800\b/.test(name)) watts = 250;
+        else if (/\bradeon pro w6600\b/.test(name)) watts = 130;
+        else if (/\binstinct mi300x\b/.test(name)) watts = 750;
+        else if (/\binstinct mi250\b|\binstinct mi250x\b/.test(name)) watts = 500;
+        else if (/\binstinct mi100\b/.test(name)) watts = 300;
+        else if (/\bfirepro s10000\b/.test(name)) watts = 375;
+        else if (/\bfirepro s9150\b/.test(name)) watts = 235;
+        else if (/\bfirepro s9000\b/.test(name)) watts = 225;
+        else if (/\bfirepro\b|\bradeon pro\b/.test(name)) watts = 120;
+
+        // Intel Arc
+        else if (/\barc b580\b/.test(name)) watts = 190;
+        else if (/\barc b570\b/.test(name)) watts = 150;
+        else if (/\barc a770\b/.test(name)) watts = 225;
+        else if (/\barc a750\b/.test(name)) watts = 225;
+        else if (/\barc a580\b/.test(name)) watts = 185;
+        else if (/\barc a380\b/.test(name)) watts = 75;
+        else if (/\barc a310\b/.test(name)) watts = 50;
+        else if (/\barc pro b70\b/.test(name)) watts = 200;
+        else if (/\barc pro b60\b/.test(name)) watts = 150;
+        else if (/\barc pro|data center gpu flex|data center gpu max/.test(name)) watts = 150;
+
+        // iGPUs und kleine Mobil-GPUs ziehen kaum Strom
+        else if (/apple .*gpu/.test(name)) {
+          if (/ultra/.test(name)) watts = 70;
+          else if (/max/.test(name)) watts = 45;
+          else if (/pro/.test(name)) watts = 30;
+          else watts = 18;
+        }
+        else if (/intel hd graphics|intel uhd graphics|iris graphics|iris xe|arc graphics|adreno|mali|immortalis/.test(name)) watts = 15;
+        else if (/radeon graphics|radeon vega (?:[3568]\b|\d+ graphics)/.test(name)) watts = 25;
+        else if (/\bquadro\b/.test(name)) watts = 100;
+        else if (/nvidia/.test(name)) watts = 180;
+        else if (/\bradeon rx\b/.test(name)) watts = 180;
+        else watts = 35;
+
+        if (/laptop|mobile|max-q|max q|\b\d{3,4}m\b/.test(name)) watts = Math.max(20, Math.round(watts * 0.5));
+        return watts;
+      }
+
+      function estimateSelectedHardwarePowerWatt(deviceType, cpuModel, gpuModel, gpuCount = 1) {
+        const cpu = String(cpuModel || '').trim();
+        const gpu = String(gpuModel || '').trim();
+        if (!cpu && !gpu) return getDefaultPowerWatt(deviceType);
+        const base = hardwareBasePowerWattByType[deviceType] ?? Math.max(15, Math.round(getDefaultPowerWatt(deviceType) * 0.2));
+        const count = gpu ? clamp(Math.floor(Number(gpuCount) || 1), 1, 16) : 0;
+        const gpuPower = gpu ? estimateGpuPowerWatt(gpu, deviceType) * count : 0;
+        return Math.round(base + estimateCpuPowerWatt(cpu, deviceType) + gpuPower);
+      }
+
+      function updatePowerEstimateFromHardware() {
+        const deviceType = ui.deviceType.value;
+        const cpuModel = hardwareSpecTypes.has(deviceType) ? ui.cpuModel.value : '';
+        const gpuModel = gpuSpecTypes.has(deviceType) ? ui.gpuModel.value : '';
+        const gpuCount = ui.gpuCount ? ui.gpuCount.value : 1;
+        ui.devicePowerWatt.value = estimateSelectedHardwarePowerWatt(deviceType, cpuModel, gpuModel, gpuCount);
+        ui.devicePowerWatt.dataset.customized = 'false';
+      }
+
+      function hasPowerInput(ports, powerWatt) {
+        return ports.some((port) => isPowerPort(port.type)) || (
+          Number(powerWatt) <= 100 && ports.some((port) => (port.type || '').trim().toLowerCase() === 'lan')
+        );
+      }
+
+      function calculateTotalPower() {
+        let total = 0;
+        state.devices.forEach((device) => {
+          const watt = Number(device.powerWatt) || 0;
+          total += watt;
+        });
+        return total;
+      }
+
+      function getConnectedEndpoint(device, port) {
+        const cable = port.cableId ? state.cables.get(port.cableId) : null;
+        if (!cable) return null;
+        if (cable.fromDeviceId === device.id && cable.fromPortId === port.id) {
+          const otherDevice = getDeviceById(cable.toDeviceId);
+          return otherDevice ? { device: otherDevice, port: getPortById(otherDevice.id, cable.toPortId) } : null;
+        }
+        if (cable.toDeviceId === device.id && cable.toPortId === port.id) {
+          const otherDevice = getDeviceById(cable.fromDeviceId);
+          return otherDevice ? { device: otherDevice, port: getPortById(otherDevice.id, cable.fromPortId) } : null;
+        }
+        return null;
+      }
+
+      function calculateDeviceLoad(device, visited = new Set()) {
+        if (!device) return 0;
+        if (device.type !== 'Steckdose' && device.type !== 'Steckdosenleiste') return Number(device.powerWatt) || 0;
+        if (visited.has(device.id)) return 0;
+        visited.add(device.id);
+        const total = device.ports
+          .filter((port) => port.powerRole === 'outlet')
+          .reduce((sum, port) => sum + calculateOutletLoad(device, port, visited), 0);
+        visited.delete(device.id);
+        return total;
+      }
+
+      function calculateOutletLoad(device, port, visited = new Set()) {
+        const endpoint = getConnectedEndpoint(device, port);
+        return endpoint ? calculateDeviceLoad(endpoint.device, visited) : 0;
+      }
+
+      function renderPowerBar() {
+        const total = calculateTotalPower();
+        const percent = clamp((total / state.maxPowerWatt) * 100, 0, 100);
+        const warning = total > state.maxPowerWatt;
+        ui.powerFill.style.width = `${percent}%`;
+        ui.powerLabel.textContent = `${t('power')}: ${total} / ${state.maxPowerWatt} W`;
+        ui.powerWrap.classList.toggle('warning', warning);
+        if (warning) {
+          ui.powerLabel.title = t('warnOverLimit');
+        } else {
+          ui.powerLabel.title = 'OK';
+        }
+      }
+
+      function populateTypeSelect() {
+        const selectedType = ui.deviceType.value;
+        ui.deviceType.innerHTML = '';
+        deviceTypes.forEach((type) => {
+          const option = document.createElement('option');
+          option.value = type;
+          option.textContent = getDeviceTypeLabel(type);
+          ui.deviceType.appendChild(option);
+        });
+        ui.deviceType.value = selectedType;
+      }
+
+      function populateCableTypeSelect() {
+        ui.cableTypeSelect.innerHTML = '';
+        cableTypes.forEach((type) => {
+          const option = document.createElement('option');
+          option.value = type;
+          option.textContent = getCableTypeLabel(type);
+          ui.cableTypeSelect.appendChild(option);
+        });
+        ui.cableTypeSelect.value = state.selectedCableType;
+      }
+
+      // Ports und welche Kabel passen
+      function getPortSpeedOptions(portType) {
+        const base = portType.toLowerCase();
+        if (base.includes('lan')) return ['100 Mbps', '1 GbE', '2.5 GbE', '10 GbE'];
+        if (base.includes('usb')) return ['1.1', '2.0', '3.0', '3.1', '3.2', 'USB-C'];
+        if (base.includes('thunderbolt')) return ['3', '4', '5'];
+        if (base.includes('hdmi')) return ['HDMI 1.4', 'HDMI 2.0', 'HDMI 2.1'];
+        if (base.includes('displayport')) return ['1.2', '1.4', '2.0', '2.1'];
+        if (base.includes('vga')) return ['VGA'];
+        if (base.includes('dvi')) return ['DVI-D', 'DVI-I'];
+        if (base.includes('klinke') || base.includes('cinch') || base.includes('xlr')) return ['3,5 mm', '6,3 mm', 'RCA', 'XLR'];
+        if (base.includes('sfp')) return ['SFP', 'SFP+'];
+        if (base.includes('sd')) return ['SD', 'SDHC', 'SDXC'];
+        if (base.includes('lightning')) return ['Lightning'];
+        return ['Standard'];
+      }
+
+      function formatPortLabel(portType, speed) {
+        if (!speed || speed === 'Standard') return portType;
+        return `${portType} ${speed}`;
+      }
+
+      function getPortShortLabel(portType, speed) {
+        const type = (portType || '').trim();
+        const speedText = ((speed || '').trim() || type).trim();
+        const lowerType = type.toLowerCase();
+
+        if (lowerType === 'usb-c') return 'UC';
+        if (lowerType.includes('usb') || lowerType.startsWith('usb')) {
+          const match = (speedText.match(/\d+(?:\.\d+)?/) || [''])[0];
+          const main = match.includes('.') ? match.split('.')[0] : match;
+          return match ? `U${main}` : 'U';
+        }
+        if (lowerType.includes('lan')) return 'L';
+        if (lowerType.includes('thunderbolt')) return 'T';
+        if (lowerType.includes('hdmi')) return 'H';
+        if (lowerType.includes('displayport')) return 'DP';
+        if (lowerType.includes('vga')) return 'V';
+        if (lowerType.includes('dvi')) return 'D';
+        if (lowerType.includes('sfp')) return 'S';
+        if (lowerType.includes('lightning')) return 'Li';
+        if (lowerType.includes('sd')) return 'SD';
+        return type.slice(0, 2).toUpperCase();
+      }
+
+      function createPortRow(port = null) {
+        const row = document.createElement('div');
+        row.className = 'port-check';
+
+        const typeSelect = document.createElement('select');
+        typeSelect.dataset.role = 'type';
+        portCatalog.forEach((portType) => {
+          const option = document.createElement('option');
+          option.value = portType;
+          option.textContent = getPortTypeLabel(portType);
+          typeSelect.appendChild(option);
+        });
+        typeSelect.value = port ? port.type : 'LAN';
+
+        const sideSelect = document.createElement('select');
+        sideSelect.dataset.role = 'side';
+        sideSelect.innerHTML = ['left', 'right', 'top', 'bottom'].map((side) => `
+          <option value="${side}">${getPortSideLabel(side)}</option>
+        `).join('');
+        sideSelect.value = port ? (port.side || 'right') : 'right';
+
+        const speedSelect = document.createElement('select');
+        speedSelect.dataset.role = 'speed';
+        const basePortType = (port ? port.type : typeSelect.value);
+        const speedOptions = getPortSpeedOptions(basePortType);
+        speedOptions.forEach((speed) => {
+          const option = document.createElement('option');
+          option.value = speed;
+          option.textContent = getPortSpeedLabel(speed);
+          speedSelect.appendChild(option);
+        });
+        speedSelect.value = port?.speed ? port.speed : (speedOptions[0] || 'Standard');
+
+        typeSelect.addEventListener('change', () => {
+          const nextOptions = getPortSpeedOptions(typeSelect.value);
+          speedSelect.innerHTML = '';
+          nextOptions.forEach((speed) => {
+            const option = document.createElement('option');
+            option.value = speed;
+            option.textContent = speed;
+            speedSelect.appendChild(option);
+          });
+          speedSelect.value = nextOptions[0] || 'Standard';
+        });
+
+        const amountInput = document.createElement('input');
+        amountInput.type = 'number';
+        amountInput.min = '1';
+        amountInput.max = '99';
+        amountInput.value = port?.amount ? port.amount : 1;
+        amountInput.dataset.role = 'amount';
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', () => {
+          if (ui.portConfig.children.length > 1) row.remove();
+        });
+
+        row.appendChild(typeSelect);
+        row.appendChild(sideSelect);
+        row.appendChild(speedSelect);
+        row.appendChild(amountInput);
+        row.appendChild(removeBtn);
+        return row;
+      }
+
+      function populatePortConfig(device = null) {
+        ui.portConfig.innerHTML = '';
+        if (!device || !device.ports || device.ports.length === 0) {
+          const preset = devicePortPresets[ui.deviceType.value] || devicePortPresets.Sonstiges;
+          preset.forEach((port) => ui.portConfig.appendChild(createPortRow({ speed: 'Standard', amount: 1, ...port })));
+          return;
+        }
+
+        const grouped = new Map();
+        device.ports.forEach((port) => {
+          const key = `${port.type}|${port.side || 'right'}|${port.speed || 'Standard'}`;
+          const current = grouped.get(key) || { ...port, amount: 0 };
+          current.amount += 1;
+          grouped.set(key, current);
+        });
+
+        grouped.forEach((port) => {
+          const row = createPortRow({ ...port, amount: port.amount || 1 });
+          ui.portConfig.appendChild(row);
+        });
+      }
+
+      const hardwareSpecTypes = new Set(['PC', 'Gaming-PC', 'Mini-PC', 'Gaming-Mini-PC', 'Laptop', 'Gaming-Laptop', 'Server']);
+      const gpuSpecTypes = new Set(['PC', 'Gaming-PC', 'Mini-PC', 'Gaming-Mini-PC', 'Laptop', 'Gaming-Laptop', 'Server']);
+      const cpuNames = [
+        "AMD A4-3400",
+        "AMD A6-3650",
+        "AMD A8-3850",
+        "AMD A10-5800K",
+        "AMD A10-7850K",
+        "AMD Athlon 200GE",
+        "AMD Athlon 220GE",
+        "AMD Athlon 3000G",
+        "AMD Athlon Gold 3150G",
+        "AMD Athlon II X2 250",
+        "AMD Athlon Silver 3050U",
+        "AMD EPYC 7251",
+        "AMD EPYC 7282",
+        "AMD EPYC 7302",
+        "AMD EPYC 7313",
+        "AMD EPYC 7352",
+        "AMD EPYC 7402",
+        "AMD EPYC 7443",
+        "AMD EPYC 7452",
+        "AMD EPYC 7453",
+        "AMD EPYC 7502",
+        "AMD EPYC 7543",
+        "AMD EPYC 7551",
+        "AMD EPYC 7552",
+        "AMD EPYC 7642",
+        "AMD EPYC 7662",
+        "AMD EPYC 7713",
+        "AMD EPYC 7742",
+        "AMD EPYC 7763",
+        "AMD EPYC 7773X",
+        "AMD EPYC 9174F",
+        "AMD EPYC 9224",
+        "AMD EPYC 9254",
+        "AMD EPYC 9274F",
+        "AMD EPYC 9334",
+        "AMD EPYC 9354",
+        "AMD EPYC 9374F",
+        "AMD EPYC 9454",
+        "AMD EPYC 9474F",
+        "AMD EPYC 9554",
+        "AMD EPYC 9654",
+        "AMD EPYC 9754",
+        "AMD EPYC 9845",
+        "AMD EPYC 9965",
+        "AMD EPYC 9995",
+        "AMD EPYC Embedded 3000 series",
+        "AMD FX-4100",
+        "AMD FX-4300",
+        "AMD FX-4350",
+        "AMD FX-6100",
+        "AMD FX-6300",
+        "AMD FX-6350",
+        "AMD FX-8120",
+        "AMD FX-8150",
+        "AMD FX-8320",
+        "AMD FX-8350",
+        "AMD FX-8370",
+        "AMD FX-8370E",
+        "AMD FX-9370",
+        "AMD FX-9590",
+        "AMD Opteron 4122",
+        "AMD Opteron 4386",
+        "AMD Opteron 6176",
+        "AMD Opteron 6386 SE",
+        "AMD Ryzen 3 210",
+        "AMD Ryzen 3 1200",
+        "AMD Ryzen 3 1300X",
+        "AMD Ryzen 3 2200G",
+        "AMD Ryzen 3 2300X",
+        "AMD Ryzen 3 3100",
+        "AMD Ryzen 3 3200G",
+        "AMD Ryzen 3 3300X",
+        "AMD Ryzen 3 4100",
+        "AMD Ryzen 3 4300G",
+        "AMD Ryzen 3 5300G",
+        "AMD Ryzen 3 7320U",
+        "AMD Ryzen 3 7330U",
+        "AMD Ryzen 3 7440U",
+        "AMD Ryzen 3 8300G",
+        "AMD Ryzen 3 8300GE",
+        "AMD Ryzen 3 8440U",
+        "AMD Ryzen 5 220",
+        "AMD Ryzen 5 1400",
+        "AMD Ryzen 5 1500X",
+        "AMD Ryzen 5 1600",
+        "AMD Ryzen 5 1600 AF",
+        "AMD Ryzen 5 1600X",
+        "AMD Ryzen 5 2400G",
+        "AMD Ryzen 5 2500X",
+        "AMD Ryzen 5 2600",
+        "AMD Ryzen 5 2600X",
+        "AMD Ryzen 5 3400G",
+        "AMD Ryzen 5 3500",
+        "AMD Ryzen 5 3500X",
+        "AMD Ryzen 5 3600",
+        "AMD Ryzen 5 3600X",
+        "AMD Ryzen 5 3600XT",
+        "AMD Ryzen 5 4500",
+        "AMD Ryzen 5 4600G",
+        "AMD Ryzen 5 4600H",
+        "AMD Ryzen 5 4600U",
+        "AMD Ryzen 5 5500",
+        "AMD Ryzen 5 5500GT",
+        "AMD Ryzen 5 5600",
+        "AMD Ryzen 5 5600G",
+        "AMD Ryzen 5 5600GT",
+        "AMD Ryzen 5 5600H",
+        "AMD Ryzen 5 5600U",
+        "AMD Ryzen 5 5600X",
+        "AMD Ryzen 5 5600X3D",
+        "AMD Ryzen 5 6600H",
+        "AMD Ryzen 5 6600U",
+        "AMD Ryzen 5 7500F",
+        "AMD Ryzen 5 7530U",
+        "AMD Ryzen 5 7535HS",
+        "AMD Ryzen 5 7540U",
+        "AMD Ryzen 5 7600",
+        "AMD Ryzen 5 7600X",
+        "AMD Ryzen 5 7600X3D",
+        "AMD Ryzen 5 7640HS",
+        "AMD Ryzen 5 7640U",
+        "AMD Ryzen 5 7645HX",
+        "AMD Ryzen 5 8400F",
+        "AMD Ryzen 5 8500G",
+        "AMD Ryzen 5 8540U",
+        "AMD Ryzen 5 8600G",
+        "AMD Ryzen 5 8640HS",
+        "AMD Ryzen 5 8640U",
+        "AMD Ryzen 5 9600",
+        "AMD Ryzen 5 9600X",
+        "AMD Ryzen 5 9600X3D",
+        "AMD Ryzen 5 9950X3D",
+        "AMD Ryzen 7 1700",
+        "AMD Ryzen 7 1700X",
+        "AMD Ryzen 7 1800X",
+        "AMD Ryzen 7 2700",
+        "AMD Ryzen 7 2700X",
+        "AMD Ryzen 7 3700X",
+        "AMD Ryzen 7 3800X",
+        "AMD Ryzen 7 3800XT",
+        "AMD Ryzen 7 4800H",
+        "AMD Ryzen 7 4800U",
+        "AMD Ryzen 7 5700",
+        "AMD Ryzen 7 5700G",
+        "AMD Ryzen 7 5700X",
+        "AMD Ryzen 7 5700X3D",
+        "AMD Ryzen 7 5800H",
+        "AMD Ryzen 7 5800U",
+        "AMD Ryzen 7 5800X",
+        "AMD Ryzen 7 5800X3D",
+        "AMD Ryzen 7 6800H",
+        "AMD Ryzen 7 6800U",
+        "AMD Ryzen 7 7700",
+        "AMD Ryzen 7 7700X",
+        "AMD Ryzen 7 7735HS",
+        "AMD Ryzen 7 7745HX",
+        "AMD Ryzen 7 7800X3D",
+        "AMD Ryzen 7 7840HS",
+        "AMD Ryzen 7 7840U",
+        "AMD Ryzen 7 8700F",
+        "AMD Ryzen 7 8700G",
+        "AMD Ryzen 7 8840HS",
+        "AMD Ryzen 7 8840U",
+        "AMD Ryzen 7 8845HS",
+        "AMD Ryzen 7 9700F",
+        "AMD Ryzen 7 9700X",
+        "AMD Ryzen 7 9700X3D",
+        "AMD Ryzen 7 9800X3D",
+        "AMD Ryzen 9 3900",
+        "AMD Ryzen 9 3900X",
+        "AMD Ryzen 9 3900XT",
+        "AMD Ryzen 9 3950X",
+        "AMD Ryzen 9 4900H",
+        "AMD Ryzen 9 5900",
+        "AMD Ryzen 9 5900HS",
+        "AMD Ryzen 9 5900X",
+        "AMD Ryzen 9 5950X",
+        "AMD Ryzen 9 5980HX",
+        "AMD Ryzen 9 6900HX",
+        "AMD Ryzen 9 7900",
+        "AMD Ryzen 9 7900X",
+        "AMD Ryzen 9 7900X3D",
+        "AMD Ryzen 9 7940HS",
+        "AMD Ryzen 9 7945HX",
+        "AMD Ryzen 9 7950X",
+        "AMD Ryzen 9 7950X3D",
+        "AMD Ryzen 9 8945HS",
+        "AMD Ryzen 9 9900X",
+        "AMD Ryzen 9 9900X3D",
+        "AMD Ryzen 9 9950X",
+        "AMD Ryzen 9 9950X3D",
+        "AMD Ryzen Embedded 7000 series",
+        "AMD Ryzen Embedded R1606G",
