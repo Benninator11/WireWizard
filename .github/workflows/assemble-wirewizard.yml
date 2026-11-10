@@ -1,0 +1,40 @@
+name: Assemble WireWizard upload
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'WireWizard-upload-parts/WireWizard-main-updated.part*.txt'
+      - '.github/workflows/assemble-wirewizard.yml'
+permissions:
+  contents: write
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Reassemble HTML from numbered parts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          folder = Path("WireWizard-upload-parts")
+          parts = sorted(folder.glob("WireWizard-main-updated.part*.txt"))
+          if len(parts) != 43:
+              raise SystemExit(f"Expected 43 parts, found {len(parts)}")
+          output = Path("WireWizard-main-updated.html")
+          output.write_text("".join(p.read_text(encoding="utf-8") for p in parts), encoding="utf-8")
+          print(f"Assembled {len(parts)} parts into {output} ({output.stat().st_size} bytes)")
+          PY
+      - name: Commit assembled file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add WireWizard-main-updated.html
+          if git diff --cached --quiet; then
+            echo "No assembled file changes."
+          else
+            git commit -m "Assemble uploaded WireWizard HTML"
+            git push origin HEAD:main
+          fi
