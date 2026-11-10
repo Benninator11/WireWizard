@@ -1,0 +1,262 @@
+  const noIp = new Set(['Lampe', 'Steckdose', 'USB-Hub', 'Adapter', 'Steckdosenleiste', 'Maus', 'Tastatur']);
+
+  const storageValue = document.getElementById('deviceStorageValue');
+  const storageUnit = document.getElementById('deviceStorageUnit');
+  const powerValue = document.getElementById('devicePowerWatt');
+  const ipValue = document.getElementById('extraIpAddress');
+  const storageField = storageValue?.closest('.field');
+  const powerField = powerValue?.closest('.field');
+  const ipField = ipValue?.closest('.extra-ip-field') || ipValue?.closest('.field');
+
+  function syncRelevantFields() {
+    const type = ui.deviceType.value;
+    const hideStorage = noStorage.has(type);
+    const hidePower = noPower.has(type);
+    const hideIp = noIp.has(type);
+
+    storageField?.classList.toggle('hidden', hideStorage);
+    if (storageValue) {
+      storageValue.disabled = hideStorage;
+      if (hideStorage) storageValue.value = '0';
+    }
+    if (storageUnit) {
+      storageUnit.disabled = hideStorage;
+      if (hideStorage) storageUnit.value = 'GB';
+    }
+
+    powerField?.classList.toggle('hidden', hidePower);
+    if (powerValue) {
+      powerValue.disabled = hidePower;
+      if (hidePower) {
+        powerValue.value = '0';
+        powerValue.dataset.customized = 'false';
+      }
+    }
+
+    ipField?.classList.toggle('hidden', hideIp);
+    if (ipValue) {
+      ipValue.disabled = hideIp;
+      if (hideIp) ipValue.value = '';
+    }
+  }
+
+  // Formular-Sync umhüllen, damit Öffnen und Bearbeiten dieselben Regeln nutzen
+  const previousSyncControls = syncDeviceTypeControls;
+  syncDeviceTypeControls = function (device = null) {
+    previousSyncControls(device);
+    syncRelevantFields();
+  };
+  const previousOpenModal = openDeviceModal;
+  openDeviceModal = function (deviceId = null) {
+    previousOpenModal(deviceId);
+    syncRelevantFields();
+  };
+  ui.deviceType.addEventListener('change', syncRelevantFields);
+  ui.deviceForm.addEventListener('submit', () => {
+    const type = ui.deviceType.value;
+    if (noStorage.has(type)) { storageValue.value = '0'; storageUnit.value = 'GB'; }
+    if (noPower.has(type)) powerValue.value = '0';
+    if (noIp.has(type) && ipValue) ipValue.value = '';
+  }, true);
+  // Alte Projekte haben teils Werte, die es für den Typ nicht mehr gibt, einmal aufräumen
+  let cleanedSavedDevices = false;
+  state.devices.forEach((device) => {
+    if (noStorage.has(device.type) && (Number(device.storage) !== 0 || (device.storageUnit && device.storageUnit !== 'GB'))) {
+      device.storage = 0;
+      device.storageUnit = 'GB';
+      cleanedSavedDevices = true;
+    }
+    if (noPower.has(device.type) && Number(device.powerWatt) !== 0) {
+      device.powerWatt = 0;
+      cleanedSavedDevices = true;
+    }
+    if (noIp.has(device.type) && String(device.ipAddress || '').trim()) {
+      device.ipAddress = '';
+      device.extraBaseHeight = Math.max(135, Number(device.extraBaseHeight) || Number(device.h) || 135);
+      device.h = Math.max(device.extraBaseHeight, Math.max(1, Number(device.rackU) || 1) * 35);
+      cleanedSavedDevices = true;
+    }
+  });
+  if (cleanedSavedDevices) {
+    saveState();
+    render();
+  }
+  syncRelevantFields();
+})();
+<\/script>
+
+<script>
+(function syncDisplayModeFromHost() {
+  const allowedModes = new Set(['pc', 'tablet', 'mobile']);
+  const root = document.documentElement;
+  function applyMode(mode) {
+    if (!allowedModes.has(mode)) return;
+    root.dataset.deviceMode = mode;
+    if (document.body) document.body.dataset.deviceMode = mode;
+  }
+  window.addEventListener('message', (event) => {
+    const message = event.data;
+    if (message?.type === 'planner-display-mode') applyMode(message.mode);
+  });
+  const width = window.innerWidth;
+  applyMode(width <= 650 ? 'mobile' : width <= 1024 ? 'tablet' : 'pc');
+  window.parent.postMessage({ type: 'planner-display-mode-ready' }, '*');
+})();
+<\/script>
+
+</body>
+</html>
+</script>
+  <script>
+    // Schließendes Script-Tag wieder einsetzen (im Text-Block ist es escaped)
+    function getPlannerSource(sourceId) {
+      const source = document.getElementById(sourceId).textContent;
+      return source.replaceAll('<\\/script>', '</scr' + 'ipt>');
+    }
+
+    const serverView = document.getElementById('server-view');
+    const cableView = document.getElementById('cable-view');
+    const serverButton = document.getElementById('show-server');
+    const cableButton = document.getElementById('show-cable');
+    const modeSwitch = document.querySelector('.mode-switch');
+    const deviceModeButtons = document.querySelectorAll('[data-device-mode-choice]');
+    const deviceModeStatus = document.getElementById('device-mode-status');
+    let selectedDeviceMode = 'auto';
+    let currentLanguage = 'de';
+
+    function detectDeviceMode() {
+      const width = window.innerWidth;
+      const ua = navigator.userAgent;
+      const isPhone = /iPhone|iPod|Android.*Mobile|Windows Phone|IEMobile|Opera Mini|Mobile/i.test(ua);
+      const isTablet = /iPad|Tablet|Android(?!.*Mobile)/i.test(ua);
+      // iPadOS meldet sich als Mac
+      const isIpadAsMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+      const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+
+      if (isPhone || width <= 650) return 'mobile';
+      if (isTablet || isIpadAsMac || width <= 900 || (coarsePointer && width <= 1200)) return 'tablet';
+      return 'pc';
+    }
+
+    function resolvedDeviceMode() {
+      return selectedDeviceMode === 'auto' ? detectDeviceMode() : selectedDeviceMode;
+    }
+
+    function syncDeviceModeToFrame(frame) {
+      if (!frame.contentWindow) return;
+      frame.contentWindow.postMessage({ type: 'planner-display-mode', mode: resolvedDeviceMode() }, '*');
+    }
+
+    function applyDeviceMode(mode) {
+      if (!['auto', 'pc', 'tablet', 'mobile'].includes(mode)) return;
+      selectedDeviceMode = mode;
+      const resolved = resolvedDeviceMode();
+      document.documentElement.dataset.deviceMode = resolved;
+      document.body.dataset.deviceMode = resolved;
+      deviceModeButtons.forEach((button) => {
+        const active = button.dataset.deviceModeChoice === mode;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+
+      const en = currentLanguage === 'en';
+      const names = { pc: 'PC', tablet: 'Tablet', mobile: en ? 'Phone' : 'Handy' };
+      const prefix = mode === 'auto' ? (en ? 'Auto:' : 'Automatisch:') : (en ? 'Mode:' : 'Modus:');
+      deviceModeStatus.textContent = `${prefix} ${names[resolved]}`;
+
+      syncDeviceModeToFrame(serverView);
+      syncDeviceModeToFrame(cableView);
+    }
+
+    deviceModeButtons.forEach((button) => {
+      button.addEventListener('click', () => applyDeviceMode(button.dataset.deviceModeChoice));
+    });
+    ['resize', 'orientationchange'].forEach((name) => {
+      window.addEventListener(name, () => {
+        if (selectedDeviceMode === 'auto') applyDeviceMode('auto');
+      }, { passive: true });
+    });
+
+    function updateModeSwitchLanguage() {
+      const en = currentLanguage === 'en';
+      const showingServer = !serverView.hidden;
+
+      document.documentElement.lang = currentLanguage;
+      document.title = showingServer ? 'ServerWizard' : 'WireWizard';
+      document.getElementById('app-name').textContent = document.title;
+      modeSwitch.setAttribute('aria-label', en ? 'Choose mode' : 'Modus auswählen');
+      serverButton.textContent = 'ServerWizard';
+      cableButton.textContent = 'WireWizard';
+      document.getElementById('project-tag').title = en ? 'Project by Benninator111' : 'Projekt von Benninator111';
+      document.getElementById('device-mode-label').textContent = en ? 'Layout' : 'Ansicht';
+      document.getElementById('device-mode-mobile').textContent = en ? 'Phone' : 'Handy';
+      applyDeviceMode(selectedDeviceMode);
+      serverView.title = 'ServerWizard – ' + (en ? 'Server planner' : 'Serverplaner');
+      cableView.title = 'WireWizard – ' + (en ? 'Cable planner' : 'Kabelplaner');
+    }
+
+    function syncPlannerLanguage(lang) {
+      if (!['de', 'en'].includes(lang)) return;
+      currentLanguage = lang;
+      updateModeSwitchLanguage();
+      [serverView, cableView].forEach((frame) => {
+        if (frame.contentWindow) frame.contentWindow.postMessage({ type: 'planner-set-language', lang }, '*');
+      });
+    }
+
+    function activeFrame() {
+      return serverView.hidden ? cableView : serverView;
+    }
+
+    function syncActivePlannerTheme() {
+      try {
+        const theme = activeFrame().contentDocument.documentElement.dataset.theme;
+        document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light';
+      } catch (err) {
+        // Frame ist noch nicht fertig geladen
+      }
+    }
+
+    function showView(which) {
+      const showServer = which === 'server';
+      serverView.hidden = !showServer;
+      cableView.hidden = showServer;
+      serverButton.classList.toggle('active', showServer);
+      cableButton.classList.toggle('active', !showServer);
+      serverButton.setAttribute('aria-pressed', String(showServer));
+      cableButton.setAttribute('aria-pressed', String(!showServer));
+      updateModeSwitchLanguage();
+      syncActivePlannerTheme();
+    }
+
+    [serverView, cableView].forEach((frame) => {
+      frame.addEventListener('load', () => {
+        frame.contentWindow.postMessage({ type: 'planner-set-language', lang: currentLanguage }, '*');
+        syncDeviceModeToFrame(frame);
+        syncActivePlannerTheme();
+      });
+    });
+
+    window.addEventListener('message', (event) => {
+      const message = event.data;
+      if (!message) return;
+      if (message.type === 'planner-language-change') syncPlannerLanguage(message.lang);
+      if (message.type === 'planner-display-mode-ready') {
+        if (event.source === serverView.contentWindow) syncDeviceModeToFrame(serverView);
+        if (event.source === cableView.contentWindow) syncDeviceModeToFrame(cableView);
+      }
+      if (message.type === 'planner-theme-change' && ['light', 'dark'].includes(message.theme) && event.source === activeFrame().contentWindow) {
+        document.documentElement.dataset.theme = message.theme;
+      }
+    });
+
+    serverView.srcdoc = getPlannerSource('server-html-source');
+    cableView.srcdoc = getPlannerSource('cable-html-source');
+    updateModeSwitchLanguage();
+    applyDeviceMode('auto');
+    document.documentElement.dataset.theme = 'light';
+    serverButton.addEventListener('click', () => showView('server'));
+    cableButton.addEventListener('click', () => showView('cable'));
+  </script>
+</body>
+</html>
