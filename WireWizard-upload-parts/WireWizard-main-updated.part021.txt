@@ -1,0 +1,500 @@
+    .ww-3d-bottom { bottom:0; transform:translateY(50%) rotateX(-90deg); background:linear-gradient(135deg,#657784,#2a3944 52%,#778994); }
+    .ww-3d-base { position:absolute; z-index:4; bottom:0; left:-7px; right:-7px; height:18px; transform:translateZ(calc(var(--cabinet-half-depth) + 5px)) translateY(8px); background:linear-gradient(#c2cbd1,#697985 45%,#364651); border:1px solid #526471; border-radius:2px; box-shadow:0 5px 7px rgba(0,0,0,.3); }
+    .ww-3d-inner { position:absolute; top:9px; right:12px; bottom:9px; left:12px; overflow:visible; transform-style:preserve-3d; background:repeating-linear-gradient(to bottom,#17212a 0 10px,#677986 10px 11px,#293642 11px 12px); box-shadow:inset 0 0 12px #000; }
+    .ww-3d-rail { position:absolute; z-index:2; top:0; bottom:0; width:10px; background:repeating-linear-gradient(to bottom,#101820 0 3px,#93a0a9 3px 5px,#455663 5px 11px); }
+    .ww-3d-rail.left {left:0}.ww-3d-rail.right {right:0}
+    /* HE-Skala und Schlitze an der Front */
+    .ww-3d-u-scale { position:absolute; z-index:2; top:0; bottom:0; left:0; width:19px; pointer-events:none; }
+    .ww-3d-u-mark { position:absolute; left:0; right:0; display:flex; align-items:center; justify-content:flex-start; gap:2px; box-sizing:border-box; padding-left:2px; color:#d6e0e7; font:5px/1 Arial,sans-serif; text-shadow:0 1px 2px #000; border-bottom:1px solid rgba(190,207,218,.2); background:linear-gradient(90deg,rgba(6,13,19,.7),rgba(6,13,19,.12)); }
+    .ww-3d-u-mark::after { content:""; margin-left:auto; width:4px; border-top:1px solid #b4c3cd; opacity:.7; }
+    .ww-3d-u-mark:nth-child(5n) { color:#fff; background:linear-gradient(90deg,rgba(63,83,97,.76),rgba(6,13,19,.1)); }
+    #ww3dDevices { position:absolute; inset:0; pointer-events:none; transform-style:preserve-3d; }
+    .ww-3d-device { --device-depth:185px; position:absolute; z-index:3; left:21px; right:19px; display:flex; align-items:center; gap:7px; padding:0 7px; overflow:visible; white-space:nowrap; border:1px solid rgba(4,13,21,.9); border-radius:2px; box-sizing:border-box; color:#f8fafc; font:700 10px Arial,sans-serif; text-shadow:0 1px rgba(0,0,0,.25); background:linear-gradient(180deg,#627989,#2f4352); box-shadow:inset 0 1px rgba(255,255,255,.3),0 1px 2px #080e13; transform:translateZ(7px); transform-style:preserve-3d; }
+    .ww-3d-device span { position:relative; z-index:4; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+    /* Jedes Gerät ist ein Quader, die Tiefe ist nur geschätzt */
+    .ww-3d-device .ww-device-top,
+    .ww-3d-device .ww-device-side,
+    .ww-3d-device .ww-device-left,
+    .ww-3d-device .ww-device-back { position:absolute; display:block; pointer-events:none; box-sizing:border-box; border:1px solid rgba(5,15,23,.9); }
+    .ww-3d-device .ww-device-top { left:-1px; top:0; width:calc(100% + 2px); height:var(--device-depth); transform-origin:50% 0; transform:rotateX(-90deg); background:repeating-linear-gradient(90deg,rgba(255,255,255,.13) 0 2px,transparent 2px 13px),linear-gradient(180deg,#8294a0,#263742); }
+    .ww-3d-device .ww-device-side { top:-1px; left:calc(100% - 1px); width:var(--device-depth); height:calc(100% + 2px); transform-origin:0 50%; transform:rotateY(90deg); background:repeating-linear-gradient(180deg,rgba(255,255,255,.06) 0 7px,transparent 7px 13px),linear-gradient(90deg,#536773,#17232c 80%); }
+    .ww-3d-device .ww-device-left { top:-1px; right:calc(100% - 1px); width:var(--device-depth); height:calc(100% + 2px); transform-origin:100% 50%; transform:rotateY(-90deg); background:linear-gradient(90deg,#101820,#354955 75%,#6a7c88); }
+    .ww-3d-device .ww-device-back { inset:0; transform:translateZ(calc(0px - var(--device-depth))); background:radial-gradient(circle at 15% 35%,#71d9a0 0 2px,transparent 2.5px),radial-gradient(circle at 15% 65%,#71d9a0 0 2px,transparent 2.5px),repeating-linear-gradient(90deg,#192630 0 8px,#3e5360 8px 10px,#23333e 10px 15px); }
+    /* Frontblenden: Laufwerksschächte, RJ45-Raster, Steckdosen */
+    .ww-3d-device::before { content:""; display:block; flex:0 0 28px; height:62%; min-height:3px; box-sizing:border-box; border:1px solid rgba(207,222,232,.48); border-radius:1px; background:repeating-linear-gradient(90deg,#111a21 0 3px,#81909a 3px 4px,#263844 4px 6px); box-shadow:inset 0 1px rgba(255,255,255,.16); }
+    .ww-3d-device.kind-server::before { flex-basis:43px; background:radial-gradient(circle at 7px 50%,#68dba3 0 1px,transparent 1.4px),repeating-linear-gradient(90deg,#0e171e 0 2px,#7c8d98 2px 3px,#263641 3px 5px); }
+    .ww-3d-device.kind-gpu::before { flex-basis:52px; background:radial-gradient(circle at 8px 50%,#6ce5ae 0 1px,transparent 1.4px),repeating-linear-gradient(90deg,#101820 0 7px,#6f818d 7px 8px,#293b47 8px 11px); }
+    .ww-3d-device.kind-storage::before { flex-basis:58px; background:radial-gradient(circle at 7px 50%,#75d8a2 0 1px,transparent 1.4px),repeating-linear-gradient(90deg,#0c151d 0 8px,#91a0a9 8px 9px,#263742 9px 11px); }
+    .ww-3d-device.kind-network::before { flex-basis:66px; height:72%; background:radial-gradient(circle at 3px 2px,#73e0a4 0 .8px,transparent 1.1px),repeating-linear-gradient(90deg,#0b151c 0 5px,#617985 5px 6px,#14252f 6px 8px); background-size:8px 5px,auto; }
+    .ww-3d-device.kind-panel::before { flex-basis:72px; height:75%; background:repeating-linear-gradient(90deg,#0b141b 0 5px,#a8b7c1 5px 5.7px,#253944 5.7px 8px); }
+    .ww-3d-device.kind-power::before { flex-basis:29px; background:radial-gradient(circle at 5px 50%,#111820 0 2px,#bec8cf 2.2px 2.8px,transparent 3px),radial-gradient(circle at 17px 50%,#111820 0 2px,#bec8cf 2.2px 2.8px,transparent 3px),linear-gradient(#6f7f8a,#293943); }
+    .ww-3d-device.kind-manager::before { flex-basis:26px; background:repeating-linear-gradient(90deg,#17242d 0 2px,#748895 2px 3px,#334955 3px 5px); }
+    .ww-3d-device::after { content:none; }
+    .ww-3d-device.kind-network{background:linear-gradient(180deg,#3b87b4,#194f70)}.ww-3d-device.kind-power{background:linear-gradient(180deg,#c18a3a,#805018)}.ww-3d-device.kind-manager{background:linear-gradient(180deg,#169b9b,#125965)}.ww-3d-device.kind-panel{background:linear-gradient(180deg,#7b8992,#3d4b55)}.ww-3d-device.kind-server{background:linear-gradient(180deg,#5c6f7b,#202d37)}.ww-3d-device.kind-gpu{background:linear-gradient(180deg,#5c687c,#252d40)}.ww-3d-device.kind-storage{background:linear-gradient(180deg,#657783,#2c3a45)}
+    .ww-3d-device .ww-watts { margin-left:auto; font-size:9px; opacity:.8; }
+    .ww-visual-sidecard { padding:13px; border:1px solid var(--border,#dfe7f6); border-radius:11px; background:var(--panel,#fff); min-width:0; }
+    .ww-visual-sidecard h3 { margin:0 0 9px; font-size:14px; }
+    .ww-visual-stat { padding:9px 0; border-bottom:1px solid var(--border,#dfe7f6); }
+    .ww-visual-stat strong { display:block; font-size:18px; }
+    .ww-visual-stat span { display:block; margin-top:3px; color:var(--muted,#607086); font-size:11px; }
+    .ww-visual-device-list { display:grid; gap:6px; margin-top:10px; }
+    .ww-visual-device-row { display:flex; justify-content:space-between; gap:8px; padding:7px; border-radius:7px; background:var(--panel-soft,#eef3ff); font-size:11px; }
+    .ww-visual-device-row strong { overflow:hidden; text-overflow:ellipsis; }
+    .ww-visual-note { margin:10px 0 0; font-size:10px; line-height:1.45; color:var(--muted,#607086); }
+    .ww-cooling-stage { min-width:360px; min-height:500px; padding:18px; display:flex; justify-content:center; align-items:center; gap:35px; background:radial-gradient(ellipse at 50% 45%,#f4fbff,#e5edf4); }
+    .ww-cooling-rack { position:relative; width:285px; height:var(--cool-rack-height,462px); border:8px solid #7e8c97; border-radius:5px; background:repeating-linear-gradient(to bottom,#1d2a35 0 10px,#8b9ba7 10px 11px); box-shadow:0 14px 28px rgba(15,25,38,.2),inset 0 0 12px #000; overflow:hidden; }
+    .ww-cool-device { position:absolute; z-index:2; left:15px; right:15px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 7px; border:1px solid rgba(10,20,30,.6); border-radius:2px; box-sizing:border-box; overflow:hidden; color:white; font-size:10px; font-weight:700; background:rgba(42,111,148,.92); }
+    .ww-cool-device.heat-warm{background:rgba(213,143,36,.94);box-shadow:0 0 14px rgba(247,164,35,.5)}.ww-cool-device.heat-hot{background:rgba(196,54,54,.96);box-shadow:0 0 19px rgba(239,68,68,.55)}
+    .ww-airflow { position:absolute; z-index:3; inset:0; pointer-events:none; background:repeating-linear-gradient(0deg,transparent 0 22px,rgba(28,160,236,.15) 22px 25px,transparent 25px 44px); mix-blend-mode:screen; animation:wwAirUp 2.6s linear infinite; }
+    .ww-airflow::after { content:"↑  ↑  ↑  ↑  ↑  ↑  ↑"; position:absolute; inset:0; display:flex; justify-content:space-around; align-items:center; writing-mode:vertical-rl; font-size:20px; font-weight:900; letter-spacing:8px; color:rgba(32,173,242,.75); text-shadow:0 0 7px rgba(14,165,233,.5); }
+    .ww-cooling-stage.air-off .ww-airflow { display:none; }
+    @keyframes wwAirUp { from{background-position:0 50px}to{background-position:0 -50px} }
+    .ww-cooling-legend { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; font-size:10px; color:#34495a; }
+    .ww-cooling-legend span { display:inline-flex; gap:5px; align-items:center; }.ww-cooling-legend i{display:inline-block;width:10px;height:10px;border-radius:3px}.ww-cooling-legend .cool{background:#229bd7}.ww-cooling-legend .warm{background:#d58f24}.ww-cooling-legend .hot{background:#c43636}
+    .ww-cooling-toggle { display:flex; align-items:center; gap:7px; padding:8px; font-size:11px; color:var(--text,#1d2a39); }
+    @media(max-width:850px){.ww-visual-body{grid-template-columns:1fr;padding:8px}.ww-visual-sidecard{order:2}.ww-visual-header{padding:10px}.ww-visual-controls{width:100%}.ww-3d-scene{min-height:520px;padding-left:20px;padding-right:70px}.ww-visual-stage{min-height:400px}.ww-visual-panel{max-height:98vh}.ww-visual-title{font-size:15px}}
+    @media(prefers-reduced-motion:reduce){.ww-airflow{animation:none!important}}
+
+    /* Rack-planner workspace inspired by dedicated rack design tools */
+    .ww-rack-visual-overlay{padding:0;align-items:stretch;justify-content:stretch;background:#17191c}
+    .ww-visual-panel{width:100vw;height:100vh;max-height:100vh;border:0;border-radius:0;box-shadow:none;background:#1e2022;color:#e7e9eb}
+    .ww-visual-header{min-height:48px;flex:0 0 48px;box-sizing:border-box;padding:6px 12px;background:#242628;border-bottom:1px solid #383b3e;gap:10px}
+    .ww-visual-title{font-size:15px;color:#f1f3f4;letter-spacing:.01em}
+    .ww-visual-subtitle{display:none}
+    .ww-visual-controls{gap:6px;flex-wrap:nowrap;margin-left:auto}
+    .ww-visual-controls button,.ww-visual-controls select,.ww-visual-controls input{padding:5px 8px;border-radius:3px;border-color:#44484c;background:#303336;color:#e4e7e9;font-size:11px}
+    .ww-visual-controls label{gap:5px;color:#aeb4b9;font-size:11px}
+    .ww-visual-controls input[type=range]{width:76px;padding:0;accent-color:#2589d8}
+    .ww-visual-controls .active,.ww-visual-controls button:hover{background:#287fc0;border-color:#287fc0;color:#fff}
+    .ww-visual-close{font-size:18px!important;min-width:30px;height:28px;line-height:1}
+    .ww-visual-body{display:grid;grid-template-columns:280px minmax(0,1fr) 310px;gap:0;padding:0;overflow:hidden;min-height:0;flex:1;height:calc(100vh - 48px);background:#1d1f21}
+    .ww-rack-library{display:flex;flex-direction:column;min-width:0;min-height:0;background:#202224;border-right:1px solid #3b3e41;color:#d8dbdd}
+    .ww-library-heading{display:flex;flex-direction:column;gap:3px;padding:15px 16px 11px;border-bottom:1px solid #34383b}
+    .ww-library-kicker{font-size:9px;letter-spacing:.14em;color:#7f8c95;font-weight:700}
+    .ww-library-heading strong{font-size:14px;color:#f0f2f3}
+    .ww-library-tabs{display:flex;gap:3px;padding:9px 12px 7px;background:#202224}
+    .ww-library-tabs button,.ww-inspector-tabs button{border:0;border-radius:3px;padding:7px 10px;background:transparent;color:#b3b8bc;font-size:11px;cursor:pointer}
+    .ww-library-tabs button.active,.ww-inspector-tabs button.active{background:#267fc2;color:#fff}
+    .ww-library-search{display:flex;align-items:center;gap:8px;margin:4px 12px 9px;padding:0 9px;height:31px;border:1px solid #45494d;border-radius:3px;background:#191b1d;color:#8f989e}
+    .ww-library-search span{font-size:20px;line-height:1}
+    .ww-library-search input{min-width:0;width:100%;border:0;outline:0;background:transparent;color:#f0f2f4;font-size:11px}
+    .ww-library-list{flex:1;min-height:0;overflow:auto;padding:0 10px 12px;scrollbar-color:#45494d #202224;scrollbar-width:thin}
+    .ww-library-group{margin:0 0 8px}
+    .ww-library-group-title{display:flex;align-items:center;justify-content:space-between;margin:0;padding:9px 8px;background:#303336;color:#d7dadd;font-size:11px;font-weight:700;border-bottom:1px solid #3a3e42}
+    .ww-library-group-title span:last-child{color:#9aa2a8;font-size:10px;font-weight:500}
+    .ww-library-card{display:flex;align-items:center;gap:9px;width:100%;padding:8px 8px;text-align:left;border:1px solid transparent;border-bottom-color:#2d3033;background:transparent;color:#d8dbdd;cursor:pointer;transition:background .14s,border-color .14s}
+    .ww-library-card:hover{background:#2c3033}
+    .ww-library-card.selected{border-color:#247fc2;background:#253746;box-shadow:inset 2px 0 #258bd4}
+    .ww-library-icon{display:grid;place-items:center;flex:0 0 25px;width:25px;height:25px;border-radius:3px;background:#30383e;color:#80b9e4;font-size:12px;font-weight:700}
+    .ww-library-card-main{display:block;min-width:0;flex:1}
+    .ww-library-card-main strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:600;color:#e4e7e9}
+    .ww-library-card-main small{display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;color:#9da5aa}
+    .ww-library-state{flex:0 0 auto;font-size:9px;color:#9da8af}
+    .ww-library-add{flex:0 0 auto;padding:3px 6px;border:1px solid #3e6680;border-radius:3px;background:#213b4d;color:#9ed7ff;font-size:10px;cursor:pointer}
+    .ww-library-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-top:1px solid #383b3e;background:#242628;color:#8e979d;font-size:10px}
+    .ww-library-footer button{padding:6px 8px;border:1px solid #444a4f;border-radius:3px;background:#303438;color:#d9dcde;font-size:10px;cursor:pointer}
+    .ww-visual-workspace{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;background:#aeb2b6}
+    .ww-workspace-toolbar{z-index:5;display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:42px;padding:5px 10px;background:#27292b;border-bottom:1px solid #3a3d40}
+    .ww-workspace-tools{display:flex;align-items:center;gap:4px;min-width:0}
+    .ww-workspace-tools button{padding:6px 8px;border:1px solid #44484b;border-radius:3px;background:#333639;color:#d3d7d9;font-size:10px;white-space:nowrap;cursor:pointer}
+    .ww-workspace-tools button:hover,.ww-workspace-tools button.active{background:#287fc0;border-color:#287fc0;color:#fff}
+    .ww-visual-stage{position:relative;display:flex;flex:1;flex-direction:column;min-height:0;overflow:hidden;border:0;border-radius:0;padding:0;background:radial-gradient(ellipse at 50% 27%,#c4c7ca 0%,#a6aaae 56%,#777d82 100%)}
+    .ww-visual-stage:after{content:"";position:absolute;z-index:0;left:-20%;right:-20%;bottom:-36%;height:56%;pointer-events:none;transform:perspective(420px) rotateX(58deg);transform-origin:top center;background-image:linear-gradient(rgba(255,255,255,.14) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.14) 1px,transparent 1px);background-size:54px 54px;opacity:.45}
+    .ww-3d-instructions{position:absolute;top:0;left:0;right:0;z-index:5;min-height:30px;box-sizing:border-box;padding:8px 12px;background:linear-gradient(180deg,rgba(37,40,43,.72),rgba(37,40,43,0));color:#f1f3f4;font-size:10px;text-shadow:0 1px 2px #333}
+    .ww-3d-scene{position:relative;z-index:1;flex:1;width:100%;min-width:0;min-height:0;height:100%;box-sizing:border-box;padding:50px 80px 45px;overflow:hidden;display:flex;align-items:center;justify-content:center;perspective:1000px;perspective-origin:50% 45%;cursor:grab}
+    .ww-3d-cabinet{flex:0 0 300px;max-height:none;}
+    .ww-3d-base{pointer-events:none}
+    .ww-3d-inner{pointer-events:auto}
+    .ww-3d-device{cursor:pointer;pointer-events:auto;transition:outline .12s,filter .12s}
+    .ww-3d-device:hover{filter:brightness(1.18)}
+    .ww-3d-device.is-selected{outline:2px solid #2d9eea;outline-offset:1px;box-shadow:0 0 0 2px rgba(38,145,220,.35),0 0 16px rgba(38,145,220,.5)}
+    #ww3dDevices{pointer-events:none}
+    .ww-3d-empty{position:absolute;z-index:6;left:50%;bottom:24px;transform:translateX(-50%);padding:9px 13px;border:1px solid rgba(255,255,255,.25);border-radius:4px;background:rgba(31,35,38,.8);color:#fff;font-size:11px;white-space:nowrap}
+    .ww-visual-sidecard{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;border:0;border-left:1px solid #3b3e41;border-radius:0;padding:0;background:#202224;color:#d9dcde}
+    .ww-inspector-tabs{display:flex;gap:2px;padding:9px 10px;border-bottom:1px solid #383b3e;background:#242628}
+    .ww-inspector-tabs button{flex:1;padding:7px 5px}
+    .ww-inspector-page{min-height:0;overflow:auto;flex:1;padding:14px 12px;scrollbar-width:thin;scrollbar-color:#45494d #202224}
+    .ww-inspector-page h3{margin:0 0 12px;font-size:13px;color:#eef0f2}
+    .ww-inspector-page[hidden]{display:none!important}
+    .ww-visual-stat{padding:9px 0;border-bottom:1px solid #383b3e}
+    .ww-visual-stat strong{color:#f0f2f4;font-size:16px}
+    .ww-visual-stat span{color:#9da5aa}
+    .ww-visual-device-row{border-bottom-color:#383b3e;color:#d9dcde}
+    .ww-visual-device-row span{color:#aeb7bd}
+    .ww-visual-note{color:#a3abb0;font-size:10px;line-height:1.45}
+    .ww-inspector-hero{display:flex;align-items:center;gap:10px;margin-bottom:15px;padding-bottom:13px;border-bottom:1px solid #393d40}
+    .ww-inspector-device-icon{display:grid;place-items:center;width:38px;height:38px;border:1px solid #315b76;border-radius:5px;background:#203a4c;color:#8bd0ff;font-size:17px}
+    .ww-inspector-hero strong{display:block;color:#f1f3f4;font-size:13px;line-height:1.3}
+    .ww-inspector-hero small{display:block;margin-top:4px;color:#9ca5ab;font-size:10px}
+    .ww-inspector-section-title{margin:15px 0 7px;color:#bfc5c9;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+    .ww-inspector-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-bottom:12px;border:1px solid #3c4043;border-radius:3px;background:#3c4043;overflow:hidden}
+    .ww-inspector-info{min-width:0;padding:8px;background:#242729}
+    .ww-inspector-info span{display:block;color:#9da5ab;font-size:9px}
+    .ww-inspector-info strong{display:block;margin-top:4px;color:#e8ebed;font-size:11px;overflow-wrap:anywhere}
+    .ww-inspector-actions{display:flex;gap:6px;margin-top:12px}
+    .ww-inspector-actions button{flex:1;padding:8px 7px;border:1px solid #46515a;border-radius:3px;background:#30383e;color:#e2e7ea;font-size:10px;cursor:pointer}
+    .ww-inspector-actions button.primary{border-color:#287fc0;background:#287fc0;color:#fff}
+    .ww-inspector-actions button.danger{border-color:#8e4141;background:#593033;color:#ffb9b9}
+    .ww-inspector-select{width:100%;margin-top:6px;padding:7px;border:1px solid #454a4e;border-radius:3px;background:#292d30;color:#e8ebed;font-size:11px}
+    .ww-scene-summary{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:8px 0 14px}
+    .ww-scene-metric{padding:10px;border:1px solid #3b4044;border-radius:3px;background:#25282a}
+    .ww-scene-metric strong{display:block;color:#f1f3f4;font-size:16px}
+    .ww-scene-metric span{display:block;margin-top:4px;color:#9da6ac;font-size:9px}
+    @media(max-width:1100px){.ww-visual-body{grid-template-columns:235px minmax(0,1fr) 270px}.ww-3d-scene{padding-left:30px;padding-right:30px}}
+    @media(max-width:760px){.ww-visual-panel{height:100vh}.ww-visual-body{grid-template-columns:1fr;overflow:auto}.ww-rack-library{max-height:250px;border-right:0;border-bottom:1px solid #3b3e41}.ww-visual-workspace{min-height:560px}.ww-visual-sidecard{min-height:300px;border-left:0;border-top:1px solid #3b3e41}.ww-workspace-toolbar{flex-wrap:wrap}.ww-workspace-tools{flex-wrap:wrap}.ww-3d-scene{min-height:500px;padding:42px 20px}.ww-visual-controls label[for=wwVisualScale]{display:none}}
+  `;
+  document.head.appendChild(visualStyle);
+
+  function makeVisualButton(id, deText, enText, titleDe, titleEn) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'button ww-visual-button'; button.id = id;
+    button.textContent = state.lang === 'en' ? enText : deText;
+    button.title = state.lang === 'en' ? titleEn : titleDe;
+    if (rackButtonParent) rackButtonParent.insertBefore(button, document.getElementById('cableColorPicker') || null);
+    return button;
+  }
+  const rack3dButton = makeVisualButton('serverRack3DViewBtn','3D-Rack','3D rack','Räumliches 3D-Rack mit Gerätehöhe, Gehäusetiefe und räumlich dargestellten Kabeln öffnen','Open the full-depth 3D rack with shaded cable tubes');
+  const coolingButton = makeVisualButton('serverCoolingViewBtn','Kühlung','Cooling','Luftstrom und geschätzte Wärmelast anzeigen','Show airflow and estimated heat load');
+
+  const visualOverlay = document.createElement('div');
+  visualOverlay.className = 'ww-rack-visual-overlay';
+  visualOverlay.hidden = true;
+  visualOverlay.setAttribute('role','dialog'); visualOverlay.setAttribute('aria-modal','true'); visualOverlay.setAttribute('aria-labelledby','wwVisualTitle');
+  visualOverlay.innerHTML = `
+    <div class="ww-visual-panel">
+      <header class="ww-visual-header">
+        <div><h2 class="ww-visual-title" id="wwVisualTitle">Virtuelles Rack</h2><p class="ww-visual-subtitle" id="wwVisualSubtitle">Drehe das Modell mit gedrückter Maustaste.</p></div>
+        <div class="ww-visual-controls">
+          <label for="wwVisualCapacity">Rack <select id="wwVisualCapacity"><option value="24">24 U</option><option value="42" selected>42 U</option><option value="48">48 U</option></select></label>
+          <label for="wwVisualScale">Größe <input id="wwVisualScale" type="range" min="8" max="16" value="15"></label>
+          <button type="button" id="wwVisualClose" class="ww-visual-close" aria-label="Ansicht schließen">×</button>
+        </div>
+      </header>
+      <div class="ww-visual-body" id="wwVisualBody">
+        <aside class="ww-rack-library">
+          <div class="ww-library-heading"><span class="ww-library-kicker">SERVERWIZARD</span><strong>Rack Library</strong></div>
+          <div class="ww-library-tabs" role="tablist" aria-label="Geräteansicht">
+            <button type="button" class="active" data-rack-library-tab="rack">Rack</button>
+            <button type="button" data-rack-library-tab="equipment">Equipment</button>
+            <button type="button" data-rack-library-tab="stored">Stored</button>
+          </div>
+          <label class="ww-library-search"><span aria-hidden="true">⌕</span><input id="wwRackLibrarySearch" type="search" placeholder="Search equipment…" autocomplete="off"></label>
+          <div class="ww-library-list" id="wwRackLibraryList"></div>
+          <div class="ww-library-footer"><span id="wwRackLibrarySummary">0 devices</span><button type="button" id="wwAddCableManager">+ Cable manager</button></div>
+        </aside>
+        <main class="ww-visual-workspace">
+          <div class="ww-workspace-toolbar">
+            <div class="ww-workspace-tools">
+              <button type="button" id="wwSortRacks">Sort Racks</button>
+              <button type="button" id="wwSnapRacks" class="active" aria-pressed="true">Snap Racks</button>
+              <button type="button" id="wwCenterRack">Center Rack</button>
+              <button type="button" id="wwResetCamera">Reset Camera</button>
+            </div>
+            <div class="ww-workspace-tools ww-workspace-tools-right">
+              <button type="button" id="wwVisualMode3d" class="active">3D View</button>
+              <button type="button" id="wwVisualBackToggle" title="Rückseite mit Kabeln und Lüfterausgängen zeigen">Show rear</button>
+              <button type="button" id="wwVisualModeCool">Cooling</button>
+            </div>
+          </div>
+          <section class="ww-visual-stage" id="wwVisual3dView">
+            <div class="ww-3d-instructions"><span id="ww3dHelpText">Drag to rotate · Shift + drag to pan · Scroll to zoom</span><span id="ww3dPlacedCount">0 devices in rack</span></div>
+            <div class="ww-3d-scene" id="ww3dScene"><div class="ww-3d-cabinet" id="ww3dCabinet"><div class="ww-3d-back" aria-hidden="true"><svg id="ww3dRearSvg" class="ww-3d-rear-svg" role="presentation" aria-hidden="true"></svg></div><div class="ww-3d-left" aria-hidden="true"></div><div class="ww-3d-side" aria-hidden="true"></div><div class="ww-3d-top" aria-hidden="true"></div><div class="ww-3d-bottom" aria-hidden="true"></div><div class="ww-3d-front"><div class="ww-3d-inner" id="ww3dInner"><span class="ww-3d-rail left"></span><span class="ww-3d-rail right"></span><div id="ww3dUScale" class="ww-3d-u-scale" aria-hidden="true"></div><div id="ww3dDevices"></div></div></div><div class="ww-3d-base"></div></div></div>
+            <div id="ww3dEmpty" hidden class="ww-3d-empty">No equipment in this rack yet. Add equipment from the library.</div>
+          </section>
+          <section class="ww-visual-stage" id="wwVisualCoolingView" hidden>
+            <div class="ww-3d-instructions"><span>Airflow and estimated thermal load</span><label class="ww-cooling-toggle"><input id="wwAirflowToggle" type="checkbox" checked> Animate airflow</label></div>
+            <div class="ww-cooling-stage" id="wwCoolingStage"><div class="ww-cooling-rack" id="wwCoolingRack"><div class="ww-airflow" id="wwAirflowLayer"></div><div id="wwCoolingDevices"></div></div></div>
+            <div class="ww-cooling-legend"><span><i class="cool"></i> Lower load</span><span><i class="warm"></i> Elevated load</span><span><i class="hot"></i> High load</span></div>
+          </section>
+        </main>
+        <aside class="ww-visual-sidecard">
+          <nav class="ww-inspector-tabs" role="tablist" aria-label="Rack details">
+            <button type="button" data-rack-inspector-tab="deployed">Deployed</button>
+            <button type="button" class="active" data-rack-inspector-tab="selected">Selected</button>
+            <button type="button" data-rack-inspector-tab="scene">Scene</button>
+          </nav>
+          <section class="ww-inspector-page" id="wwInspectorDeployed" hidden><h3 id="wwVisualStatsTitle">Rack overview</h3><div id="wwVisualStats"></div><p class="ww-visual-note" id="wwVisualNote">Thermal estimates are based on configured power draw.</p></section>
+          <section class="ww-inspector-page" id="wwInspectorSelected"><div id="wwSelectedDeviceInfo"></div></section>
+          <section class="ww-inspector-page" id="wwInspectorScene" hidden><div id="wwSceneInfo"></div></section>
+        </aside>
+      </div>
+    </div>`;
+  document.body.appendChild(visualOverlay);
+
+  const visualCapacity = visualOverlay.querySelector('#wwVisualCapacity');
+  const visualScale = visualOverlay.querySelector('#wwVisualScale');
+  const visual3dView = visualOverlay.querySelector('#wwVisual3dView');
+  const visualCoolingView = visualOverlay.querySelector('#wwVisualCoolingView');
+  const visual3dDevices = visualOverlay.querySelector('#ww3dDevices');
+  const visualCoolingDevices = visualOverlay.querySelector('#wwCoolingDevices');
+  const visualStats = visualOverlay.querySelector('#wwVisualStats');
+  const visualStatsTitle = visualOverlay.querySelector('#wwVisualStatsTitle');
+  const visualNote = visualOverlay.querySelector('#wwVisualNote');
+  const visualScene = visualOverlay.querySelector('#ww3dScene');
+  const visualCabinet = visualOverlay.querySelector('#ww3dCabinet');
+  const visualRearSvg = visualOverlay.querySelector('#ww3dRearSvg');
+  const visualUScale = visualOverlay.querySelector('#ww3dUScale');
+  const visualBackToggle = visualOverlay.querySelector('#wwVisualBackToggle');
+  const visualRack3dCount = visualOverlay.querySelector('#ww3dPlacedCount');
+  const visualCoolingStage = visualOverlay.querySelector('#wwCoolingStage');
+  const visualInner = visualOverlay.querySelector('#ww3dInner');
+  const visualLibraryList = visualOverlay.querySelector('#wwRackLibraryList');
+  const visualLibrarySearch = visualOverlay.querySelector('#wwRackLibrarySearch');
+  const visualLibrarySummary = visualOverlay.querySelector('#wwRackLibrarySummary');
+  const visualSelectedInfo = visualOverlay.querySelector('#wwSelectedDeviceInfo');
+  const visualSceneInfo = visualOverlay.querySelector('#wwSceneInfo');
+  const visualSnapButton = visualOverlay.querySelector('#wwSnapRacks');
+  let visualLibraryTab = 'equipment';
+  let visualInspectorTab = 'selected';
+  let visualSelectedDeviceId = null;
+  let visualLibrarySort = 'category';
+  let visualSnapEnabled = true;
+  let visualMode = '3d';
+  let visualYaw = -32;
+  let visualPitch = -13;
+  let visualPanX = 0;
+  let visualPanY = 0;
+  let visualBackSideShown = false;
+  let visualDragging = false;
+  let visualDragMode = 'rotate';
+  let visualPointer = null;
+
+  function visualT(de, en) { return state.lang === 'en' ? en : de; }
+  function visualUnitSize() { return Math.max(8, Math.min(16, Number(visualScale.value) || 15)); }
+  function visualCapacityCount() { return Math.max(1, Number(visualCapacity.value) || 42); }
+  function visualPlacedDevices() {
+    return [...state.devices.values()].map((device) => ({device, placement: serverRackPlacement(device, visualCapacityCount())})).filter((item) => item.placement);
+  }
+  function visualAllDeviceStats() {
+    const all = [...state.devices.values()];
+    const total = all.reduce((sum, device) => sum + Math.max(0, Number(device.powerWatt) || 0), 0);
+    const placed = visualPlacedDevices();
+    return {all,total,placed,unplaced:all.length-placed.length,highest:[...all].sort((a,b)=>(Number(b.powerWatt)||0)-(Number(a.powerWatt)||0)).slice(0,5)};
+  }
+  function visualDeviceClass(device) {
+    const rackKind = serverRackKind(device);
+    if (rackKind) return rackKind;
+    const label = `${device.type || ''} ${device.name || ''}`.toLowerCase();
+    if (/gpu.?server|ai.?server|compute.?server|accelerator|hpc.?server/.test(label)) return 'kind-gpu';
+    if (/nas|san|storage|disk.?array|storage.?server|jbod/.test(label)) return 'kind-storage';
+    if (/server|workstation|rack.?pc|gaming.?pc|tower.?pc/.test(label)) return 'kind-server';
+    return '';
+  }
+  function visualDeviceDepthInfo(device) {
+    const label = `${device.type || ''} ${device.name || ''}`.toLowerCase();
+    // Tiefen nur geschätzt (nach Bauform, Rack = 1000 mm), keine Herstellerangaben
+    if (/kabelorganisator/.test(label)) return { px: 78, mm: 270 };
+    if (/patchpanel/.test(label)) return { px: 96, mm: 330 };
+    if (/rack.?pdu|power distribution|usv|ups|steckdosenleiste/.test(label)) return { px: 142, mm: 490 };
+    if (/switch|router|firewall|kvm/.test(label)) return { px: 166, mm: 570 };
+    if (/nas|san|storage|jbod|disk.?array/.test(label)) return { px: 252, mm: 870 };
+    if (/gpu.?server|ai.?server|accelerator|hpc.?server/.test(label)) return { px: 272, mm: 940 };
+    if (/server|workstation|rack.?pc/.test(label)) return { px: 238, mm: 820 };
+    return { px: 184, mm: 635 };
+  }
+  function visualDeviceCategory(device) {
+    const label = `${device.type || ''} ${device.name || ''}`.toLowerCase();
+    if (/rack.?pdu|power|usv|ups|steckdosen|power distribution/.test(label)) return 'power';
+    if (/patchpanel|switch|router|firewall|network|kvm|access.?point|modem/.test(label)) return 'network';
+    if (/nas|san|storage|jbod|disk.?array|hdd|ssd|drive/.test(label)) return 'storage';
+    if (/server|workstation|gpu|compute|pc|c220|r[0-9]{3,4}/.test(label)) return 'compute';
+    return 'other';
+  }
+  function visualCategoryLabel(category) {
+    const labels = {
+      network: visualT('Networking','Networking'),
+      compute: visualT('Compute','Compute'),
+      storage: visualT('Storage','Storage'),
+      power: visualT('Power','Power'),
+      other: visualT('Other','Other')
+    };
+    return labels[category] || labels.other;
+  }
+  function visualCategoryIcon(category) {
+    return ({network:'N',compute:'C',storage:'S',power:'P',other:'R'})[category] || 'R';
+  }
+  function visualSetInspectorTab(tab) {
+    visualInspectorTab = tab;
+    visualOverlay.querySelectorAll('[data-rack-inspector-tab]').forEach((button) => button.classList.toggle('active', button.dataset.rackInspectorTab === tab));
+    visualOverlay.querySelector('#wwInspectorDeployed').hidden = tab !== 'deployed';
+    visualOverlay.querySelector('#wwInspectorSelected').hidden = tab !== 'selected';
+    visualOverlay.querySelector('#wwInspectorScene').hidden = tab !== 'scene';
+  }
+  function visualSetLibraryTab(tab) {
+    visualLibraryTab = tab;
+    visualOverlay.querySelectorAll('[data-rack-library-tab]').forEach((button) => button.classList.toggle('active', button.dataset.rackLibraryTab === tab));
+    visualUpdateLibrary();
+  }
+  function visualSelectDevice(deviceId) {
+    visualSelectedDeviceId = deviceId == null ? null : String(deviceId);
+    visualSetInspectorTab('selected');
+    renderVisualRack();
+  }
+  function visualFindFreeStart(device) {
+    const cap = visualCapacityCount();
+    const height = serverRackHeight(device);
+    for (let start = 1; start + height - 1 <= cap; start++) {
+      if (serverRackCanPlace(device.id, start, cap)) return start;
+    }
+    return null;
+  }
+  function visualPlaceDevice(deviceId, start) {
+    const device = state.devices.get(deviceId) || [...state.devices.values()].find((item) => String(item.id) === String(deviceId));
+    if (!device) return;
+    const target = Number.isFinite(Number(start)) ? Number(start) : visualFindFreeStart(device);
+    if (!target) {
+      showToast(visualT('Kein freier Platz für dieses Gerät vorhanden.','There is no free space for this device.'));
+      return;
+    }
+    serverRackPlace(device.id, target);
+    visualSelectedDeviceId = String(device.id);
+    visualSetInspectorTab('selected');
+    renderVisualRack();
+  }
+  function visualUpdateLibrary() {
+    if (!visualLibraryList) return;
+    const cap = visualCapacityCount();
+    const query = String(visualLibrarySearch?.value || '').trim().toLocaleLowerCase();
+    let devices = [...state.devices.values()].filter((device) => {
+      const placement = serverRackPlacement(device, cap);
+      if (visualLibraryTab === 'rack' && !placement) return false;
+      if (visualLibraryTab === 'stored' && placement) return false;
+      return !query || `${device.name || ''} ${device.type || ''}`.toLocaleLowerCase().includes(query);
+    });
+    if (visualLibrarySort === 'power') devices.sort((a,b) => (Number(b.powerWatt)||0) - (Number(a.powerWatt)||0));
+    else if (visualLibrarySort === 'name') devices.sort((a,b) => String(a.name||'').localeCompare(String(b.name||''), state.lang === 'en' ? 'en' : 'de'));
+    else devices.sort((a,b) => visualDeviceCategory(a).localeCompare(visualDeviceCategory(b)) || String(a.name||'').localeCompare(String(b.name||''), state.lang === 'en' ? 'en' : 'de'));
+    visualLibraryList.replaceChildren();
+    const grouped = new Map();
+    devices.forEach((device) => {
+      const category = visualDeviceCategory(device);
+      if (!grouped.has(category)) grouped.set(category, []);
+      grouped.get(category).push(device);
+    });
+    const order = ['network','compute','storage','power','other'];
+    order.forEach((category) => {
+      const groupDevices = grouped.get(category) || [];
+      if (!groupDevices.length) return;
+      const group = document.createElement('section'); group.className = 'ww-library-group';
+      const heading = document.createElement('div'); heading.className = 'ww-library-group-title';
+      const label = document.createElement('span'); label.textContent = visualCategoryLabel(category);
+      const count = document.createElement('span'); count.textContent = String(groupDevices.length);
+      heading.append(label,count); group.appendChild(heading);
+      groupDevices.forEach((device) => {
+        const placement = serverRackPlacement(device, cap);
+        const card = document.createElement('button'); card.type = 'button'; card.className = 'ww-library-card' + (String(device.id) === visualSelectedDeviceId ? ' selected' : '');
+        card.draggable = true; card.dataset.deviceId = String(device.id);
+        const icon = document.createElement('span'); icon.className = 'ww-library-icon'; icon.textContent = visualCategoryIcon(category);
+        const main = document.createElement('span'); main.className = 'ww-library-card-main';
+        const name = document.createElement('strong'); name.textContent = device.name || visualT('Gerät','Device');
+        const detail = document.createElement('small'); detail.textContent = `${device.type || visualT('Gerät','Device')} · ${serverRackHeight(device)}U`;
+        main.append(name,detail);
+        const stateLabel = document.createElement('span'); stateLabel.className = 'ww-library-state';
+        stateLabel.textContent = placement ? `U${placement.start}–${placement.top}` : visualT('Stored','Stored');
+        card.append(icon,main,stateLabel);
+        card.addEventListener('click', () => visualSelectDevice(device.id));
+        card.addEventListener('dragstart', (event) => {
+          event.dataTransfer.setData('text/x-serverwizard-device', String(device.id));
+          event.dataTransfer.setData('text/plain', String(device.id));
+          event.dataTransfer.effectAllowed = 'move';
+        });
+        group.appendChild(card);
+      });
+      visualLibraryList.appendChild(group);
+    });
+    if (!devices.length) {
+      const empty = document.createElement('div'); empty.className = 'server-rack-empty';
+      empty.textContent = visualT('Keine passenden Geräte gefunden.','No matching equipment found.');
+      visualLibraryList.appendChild(empty);
+    }
+    const total = [...state.devices.values()].length;
+    visualLibrarySummary.textContent = `${devices.length} / ${total} ${visualT('Geräte','devices')}`;
+  }
+  function visualInfoCell(parent, labelText, valueText) {
+    const cell = document.createElement('div'); cell.className = 'ww-inspector-info';
+    const label = document.createElement('span'); label.textContent = labelText;
+    const value = document.createElement('strong'); value.textContent = valueText;
+    cell.append(label,value); parent.appendChild(cell);
+  }
+  function visualUpdateSelectedInfo() {
+    if (!visualSelectedInfo) return;
+    visualSelectedInfo.replaceChildren();
+    const device = [...state.devices.values()].find((item) => String(item.id) === String(visualSelectedDeviceId));
+    if (!device) {
+      const empty = document.createElement('div');
+      empty.innerHTML = `<h3>${visualT('Kein Gerät ausgewählt','No device selected')}</h3><p class="ww-visual-note">${visualT('Wähle ein Gerät links in der Bibliothek oder direkt im 3D-Rack aus, um Details und Platzierung zu bearbeiten.','Select equipment from the library or directly in the 3D rack to inspect and edit its placement.')}</p>`;
+      visualSelectedInfo.appendChild(empty); return;
+    }
+    const placement = serverRackPlacement(device, visualCapacityCount());
+    const category = visualDeviceCategory(device);
+    const hero = document.createElement('div'); hero.className = 'ww-inspector-hero';
+    const icon = document.createElement('span'); icon.className = 'ww-inspector-device-icon'; icon.textContent = visualCategoryIcon(category);
+    const heading = document.createElement('div');
+    const name = document.createElement('strong'); name.textContent = device.name || visualT('Gerät','Device');
+    const type = document.createElement('small'); type.textContent = `${device.type || visualT('Gerät','Device')} / ${visualCategoryLabel(category)}`;
+    heading.append(name,type); hero.append(icon,heading); visualSelectedInfo.appendChild(hero);
+    const infoTitle = document.createElement('div'); infoTitle.className = 'ww-inspector-section-title'; infoTitle.textContent = visualT('Info','Info'); visualSelectedInfo.appendChild(infoTitle);
+    const grid = document.createElement('div'); grid.className = 'ww-inspector-info-grid';
+    const depth = visualDeviceDepthInfo(device);
+    const ports = Array.isArray(device.ports) ? device.ports.length : 0;
+    const connected = [...state.cables.values()].filter((cable) => String(cable.fromDeviceId) === String(device.id) || String(cable.toDeviceId) === String(device.id)).length;
+    visualInfoCell(grid, visualT('Rack position','Rack position'), placement ? `U${placement.start}–U${placement.top}` : visualT('Not mounted','Not mounted'));
+    visualInfoCell(grid, visualT('Mount height','Mount height'), `${serverRackHeight(device)} U`);
+    visualInfoCell(grid, visualT('Power','Power'), `${Math.max(0,Number(device.powerWatt)||0)} W`);
+    visualInfoCell(grid, visualT('Ports','Ports'), String(ports));
+    visualInfoCell(grid, visualT('Connected cables','Connected cables'), String(connected));
+    visualInfoCell(grid, visualT('Estimated depth','Estimated depth'), `~${depth.mm} mm`);
+    visualSelectedInfo.appendChild(grid);
+    const instanceTitle = document.createElement('div'); instanceTitle.className = 'ww-inspector-section-title'; instanceTitle.textContent = visualT('Instance','Instance'); visualSelectedInfo.appendChild(instanceTitle);
+    const positionLabel = document.createElement('label'); positionLabel.style.cssText = 'display:block;color:#aeb7bd;font-size:10px'; positionLabel.textContent = visualT('Mount at U','Mount at U');
+    const positionSelect = document.createElement('select'); positionSelect.className = 'ww-inspector-select';
+    const preferredStart = placement ? placement.start : (visualFindFreeStart(device) || 1);
+    for (let u = visualCapacityCount(); u >= 1; u--) {
+      const option = document.createElement('option'); option.value = String(u); option.textContent = `U${u}`;
+      if (preferredStart === u) option.selected = true;
+      positionSelect.appendChild(option);
+    }
+    positionLabel.appendChild(positionSelect); visualSelectedInfo.appendChild(positionLabel);
+    const actions = document.createElement('div'); actions.className = 'ww-inspector-actions';
+    const place = document.createElement('button'); place.type = 'button'; place.className = 'primary'; place.textContent = placement ? visualT('Apply position','Apply position') : visualT('Place in rack','Place in rack');
+    place.addEventListener('click', () => visualPlaceDevice(device.id, Number(positionSelect.value)));
+    actions.appendChild(place);
+    if (placement) {
+      const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'danger'; remove.textContent = visualT('Remove','Remove');
+      remove.addEventListener('click', () => { serverRackRemove(device.id); visualSelectedDeviceId = String(device.id); renderVisualRack(); });
+      actions.appendChild(remove);
+    }
+    visualSelectedInfo.appendChild(actions);
+    const note = document.createElement('p'); note.className = 'ww-visual-note';
+    note.textContent = visualT('Die angezeigte Gerätetiefe ist eine schematische Typannahme und kein bestätigtes Herstellermaß.','Displayed device depth is a schematic type estimate, not a verified manufacturer dimension.');
+    visualSelectedInfo.appendChild(note);
+  }
+  function visualUpdateSceneInfo() {
+    if (!visualSceneInfo) return;
+    visualSceneInfo.replaceChildren();
+    const stats = visualAllDeviceStats();
+    const used = stats.placed.reduce((sum,item) => sum + item.placement.height, 0);
+    const cap = visualCapacityCount();
+    const totalPower = stats.all.reduce((sum,item) => sum + Math.max(0,Number(item.powerWatt)||0), 0);
+    const connectedCables = [...state.cables.values()].filter((cable) => stats.placed.some((item) => String(item.device.id) === String(cable.fromDeviceId) || String(item.device.id) === String(cable.toDeviceId))).length;
+    const title = document.createElement('h3'); title.textContent = visualT('Scene settings','Scene settings'); visualSceneInfo.appendChild(title);
+    const metrics = document.createElement('div'); metrics.className = 'ww-scene-summary';
+    [[`${used}/${cap} U`,visualT('Rack-Belegung','Rack occupancy')],[String(stats.placed.length),visualT('Montierte Geräte','Mounted devices')],[`${Math.round(totalPower)} W`,visualT('Konfigurierte Leistung','Configured power')],[String(connectedCables),visualT('Verbundene Kabel','Connected cables')]].forEach(([value,label])=>{
+      const item = document.createElement('div'); item.className = 'ww-scene-metric';
+      const strong = document.createElement('strong'); strong.textContent = value;
+      const small = document.createElement('span'); small.textContent = label;
+      item.append(strong,small); metrics.appendChild(item);
+    });
+    visualSceneInfo.appendChild(metrics);
+    const capacityLabel = document.createElement('label'); capacityLabel.style.cssText = 'display:block;margin:12px 0 5px;color:#aeb7bd;font-size:10px'; capacityLabel.textContent = visualT('Rack-Kapazität','Rack capacity'); visualSceneInfo.appendChild(capacityLabel);
+    const capacitySelect = document.createElement('select'); capacitySelect.className = 'ww-inspector-select';
+    [24,42,48].forEach((value)=>{const option=document.createElement('option');option.value=String(value);option.textContent=`${value} U`;option.selected=value===cap;capacitySelect.appendChild(option);});
+    capacitySelect.addEventListener('change',()=>{visualCapacity.value=capacitySelect.value;rackCapacitySelect.value=capacitySelect.value;renderServerRack();renderVisualRack();});
+    visualSceneInfo.appendChild(capacitySelect);
+    const note = document.createElement('p'); note.className = 'ww-visual-note'; note.textContent = visualT('Leistungswerte stammen aus den Geräteeinstellungen. Die Kühlungsansicht ist eine Schätzung und keine Temperaturmessung.','Power values come from device settings. Cooling is an estimate, not a temperature measurement.'); visualSceneInfo.appendChild(note);
+  }
+  function visualUpdateInspector() {
+    visualUpdateSelectedInfo();
+    visualUpdateSceneInfo();
+  }
+  function visualUpdateWorkspaceLabels() {
