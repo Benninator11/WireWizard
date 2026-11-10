@@ -1,0 +1,500 @@
+          addDevice: 'Gerät hinzufügen',
+          deleteSelection: 'Löschen',
+          cableType: 'Kabeltyp',
+          devices: 'Geräte',
+          power: 'Stromverbrauch',
+          device: 'Gerät',
+          save: 'Speichern',
+          cancel: 'Abbrechen',
+          deviceDelete: 'Gerät löschen',
+          close: 'Schließen',
+          name: 'Name',
+          type: 'Typ',
+          description: 'Beschreibung',
+          storage: 'Speicherkapazität',
+          powerWatt: 'Stromverbrauch (W)',
+          color: 'Farbe',
+          ports: 'Ports',
+          jsonExport: 'JSON-Export',
+          jsonImport: 'JSON-Import',
+          warnOverLimit: 'Überschreitung der Steckdosenleistung',
+          deviceNameRequired: 'Bitte gib einen Namen für dein Gerät ein.',
+          selfConnectionBlocked: 'Selbstverbindung wird verhindert.',
+          occupiedPort: 'Dieser Port ist bereits belegt.',
+          incompatibleCable: 'Diese Ports sind nicht kompatibel.',
+          missingPowerPort: 'Jedes Gerät braucht einen Strom-, USB- oder bei höchstens 100 W einen PoE-Anschluss.',
+          removeOutletCableFirst: 'Bitte zuerst die Kabel der zu entfernenden Steckdosen trennen.',
+          noDeviceSelected: 'Kein Gerät ausgewählt.',
+          imported: 'JSON importiert.',
+          invalidJson: 'Ungültiges JSON-Format.',
+          saved: 'Gespeichert.',
+          selectionDeleted: 'Auswahl gelöscht.',
+          darkMode: 'Dunkelmodus',
+          lightMode: 'Hellmodus',
+          zoomIn: 'Vergrößern',
+          zoomOut: 'Verkleinern',
+          info: 'Info'
+        },
+        en: {
+          addDevice: 'Add device',
+          deleteSelection: 'Delete',
+          cableType: 'Cable type',
+          devices: 'Devices',
+          power: 'Power usage',
+          device: 'Device',
+          save: 'Save',
+          cancel: 'Cancel',
+          deviceDelete: 'Delete device',
+          close: 'Close',
+          name: 'Name',
+          type: 'Type',
+          description: 'Description',
+          storage: 'Storage capacity',
+          powerWatt: 'Power usage (W)',
+          color: 'Color',
+          ports: 'Ports',
+          jsonExport: 'Export JSON',
+          jsonImport: 'Import JSON',
+          warnOverLimit: 'Power limit exceeded',
+          deviceNameRequired: 'Please enter a name for your device.',
+          selfConnectionBlocked: 'Self-connections are prevented.',
+          occupiedPort: 'This port is already occupied.',
+          incompatibleCable: 'These ports are not compatible.',
+          missingPowerPort: 'Every device needs a power or USB connector, or PoE when using at most 100 W.',
+          removeOutletCableFirst: 'Disconnect cables from outlets before reducing their number.',
+          noDeviceSelected: 'No device selected.',
+          imported: 'JSON imported.',
+          invalidJson: 'Invalid JSON format.',
+          saved: 'Saved.',
+          selectionDeleted: 'Selection deleted.',
+          darkMode: 'Dark mode',
+          lightMode: 'Light mode',
+          zoomIn: 'Zoom in',
+          zoomOut: 'Zoom out',
+          info: 'Info'
+        }
+      };
+
+      const state = {
+        lang: 'de',
+        theme: 'light',
+        zoom: 1,
+        devices: new Map(),
+        cables: new Map(),
+        selectedCableType: 'LAN',
+        selectedPort: null,
+        selectedDeviceId: null,
+        hoveredDeviceId: null,
+        selectedCableId: null,
+        openDeviceId: null,
+        maxPowerWatt: MAX_POWER_WATT,
+        nextCounter: 1,
+      };
+
+      // häufig genutzte DOM-Elemente
+      const ui = {
+        canvas: document.getElementById('canvas'),
+        canvasContent: document.getElementById('canvasContent'),
+        deviceLayer: document.getElementById('deviceLayer'),
+        cableLayer: document.getElementById('cableLayer'),
+        cableColorPicker: document.getElementById('cableColorPicker'),
+        deviceList: document.getElementById('deviceList'),
+        cableTypeSelect: document.getElementById('cableTypeSelect'),
+        powerFill: document.getElementById('powerFill'),
+        powerLabel: document.getElementById('powerLabel'),
+        powerWrap: document.getElementById('powerWrap'),
+        themeToggleBtn: document.getElementById('themeToggleBtn'),
+        themeToggleLabel: document.getElementById('themeToggleLabel'),
+        zoomOutBtn: document.getElementById('zoomOutBtn'),
+        zoomInBtn: document.getElementById('zoomInBtn'),
+        zoomLevel: document.getElementById('zoomLevel'),
+        modal: document.getElementById('deviceModal'),
+        modalTitle: document.getElementById('modalTitle'),
+        deviceForm: document.getElementById('deviceForm'),
+        cpuModelField: document.getElementById('cpuModelField'),
+        cpuModel: document.getElementById('deviceCpuModel'),
+        ramField: document.getElementById('ramField'),
+        ramGb: document.getElementById('deviceRamGb'),
+        ramTypeField: document.getElementById('ramTypeField'),
+        ramType: document.getElementById('deviceRamType'),
+        gpuModelField: document.getElementById('gpuModelField'),
+        gpuModel: document.getElementById('deviceGpuModel'),
+        gpuCountField: document.getElementById('gpuCountField'),
+        gpuCount: document.getElementById('deviceGpuCount'),
+        raspberryPiVersionField: document.getElementById('raspberryPiVersionField'),
+        raspberryPiVersion: document.getElementById('raspberryPiVersion'),
+        deleteDeviceBtn: document.getElementById('deleteDeviceBtn'),
+        closeModalBtn: document.getElementById('closeModalBtn'),
+        cancelDeviceBtn: document.getElementById('cancelDeviceBtn'),
+        importFileInput: document.getElementById('importFileInput'),
+        toast: document.getElementById('toast'),
+        cableTooltip: document.getElementById('cableTooltip'),
+        portConfig: document.getElementById('portConfig'),
+        deviceName: document.getElementById('deviceName'),
+        deviceType: document.getElementById('deviceType'),
+        deviceDescription: document.getElementById('deviceDescription'),
+        deviceStorageValue: document.getElementById('deviceStorageValue'),
+        deviceStorageUnit: document.getElementById('deviceStorageUnit'),
+        devicePowerWatt: document.getElementById('devicePowerWatt'),
+        outletCountField: document.getElementById('outletCountField'),
+        outletCountInput: document.getElementById('outletCountInput'),
+      };
+
+      // kleine Helfer: IDs, Übersetzung, Toast
+      function uid(prefix = 'id') {
+        const value = state.nextCounter++;
+        return `${prefix}-${value}`;
+      }
+
+      function t(key) {
+        return strings[state.lang][key] || key;
+      }
+
+      function getDeviceTypeLabel(deviceType) {
+        return state.lang === 'en' ? deviceTypeEnglishLabels[deviceType] || deviceType : deviceType;
+      }
+
+      function showToast(message) {
+        ui.toast.textContent = message;
+        ui.toast.classList.add('show');
+        clearTimeout(showToast.timer);
+        showToast.timer = setTimeout(() => ui.toast.classList.remove('show'), 1800);
+      }
+
+      function saveState() {
+        const payload = {
+          lang: state.lang,
+          theme: state.theme,
+          zoom: state.zoom,
+          devices: Array.from(state.devices.values()),
+          cables: Array.from(state.cables.values()),
+          selectedCableType: state.selectedCableType,
+          nextCounter: state.nextCounter,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      }
+
+      function loadState() {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        try {
+          const parsed = JSON.parse(raw);
+          if (!parsed || !Array.isArray(parsed.devices)) return;
+          state.lang = parsed.lang || 'de';
+          state.theme = parsed.theme === 'dark' ? 'dark' : 'light';
+          state.zoom = Number.isFinite(Number(parsed.zoom)) ? clamp(Number(parsed.zoom), MIN_ZOOM, MAX_ZOOM) : 1;
+          state.selectedCableType = parsed.selectedCableType || 'LAN';
+          state.nextCounter = Number(parsed.nextCounter || 1);
+          state.devices = new Map((parsed.devices || []).map((device) => [device.id, device]));
+          state.cables = new Map((parsed.cables || []).map((cable) => [cable.id, cable]));
+        } catch (err) {
+          console.error('Stand konnte nicht geladen werden:', err);
+        }
+      }
+
+      function ensurePortCableIds() {
+        state.devices.forEach((device) => {
+          device.ports.forEach((port) => {
+            const related = [...state.cables.values()].find((cable) => {
+              return (cable.fromDeviceId === device.id && cable.fromPortId === port.id) || (cable.toDeviceId === device.id && cable.toPortId === port.id);
+            });
+            port.cableId = related ? related.id : null;
+          });
+        });
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+      }
+
+      function isPowerPort(portType) {
+        return powerPortTypes.has((portType || '').trim().toLowerCase());
+      }
+
+      function getDefaultPowerWatt(deviceType) {
+        return defaultPowerWattByType[deviceType] ?? 0;
+      }
+
+      // Erst die Grundlast schätzen; CPU und GPU kommen extra dazu.
+      const hardwareBasePowerWattByType = {
+        // Grundlast ohne CPU/GPU
+        'PC': 70, 'Mini-PC': 18, 'Laptop': 10, Server: 120,
+        'Rack-Server': 150, 'Compute-Server': 180, 'GPU-Server': 250,
+        'Storage-Server': 150, 'SAN-Array': 250, NAS: 35,
+        'Server-Switch': 35, 'Core-Switch': 70, 'Fibre-Channel-Switch': 50,
+        Router: 25, Firewall: 45, 'Load-Balancer': 60,
+        'KVM-Switch': 15, 'Console-Server': 20, 'Backup-Server': 120,
+        'Tape-Library': 100, 'Management-Server': 35
+      };
+
+      function estimateCpuPowerWatt(model, deviceType) {
+        const name = String(model || '').toLowerCase().replace(/\(r\)|\(tm\)/g, '').trim();
+        if (!name) return 0;
+        const catalogCpuWatt = plannerWattFromSpec(getPlannerCpuHardwareSpec(model)?.power);
+        if (catalogCpuWatt > 0) return catalogCpuWatt;
+
+        // Mobile CPUs und die sparsamen x86-Modelle.
+        if (/\b(?:intel )?atom\b|\bceleron n\d+|\bpentium silver\b|\bintel processor n\d+/i.test(name)) {
+          const nMatch = name.match(/\bn(\d{3,4})\b/);
+          return nMatch && Number(nMatch[1]) >= 200 ? 10 : 8;
+        }
+        if (/\b(?:snapdragon|qualcomm|apple a\d+|apple m[1-5]|mediatek|exynos|tegra|cortex|ampere altra|graviton)\b/i.test(name)) {
+          if (/apple m[1-5].*ultra/.test(name)) return 70;
+          if (/apple m[1-5].*max/.test(name)) return 45;
+          if (/apple m[1-5].*pro/.test(name)) return 30;
+          if (/apple m[1-5]/.test(name)) return 20;
+          if (/snapdragon x elite/.test(name)) return 35;
+          if (/snapdragon x plus/.test(name)) return 25;
+          if (/snapdragon x/.test(name)) return 23;
+          if (/graviton|ampere altra/.test(name)) return 180;
+          return 12;
+        }
+
+        if (/\bthreadripper pro\b/.test(name)) return 280;
+        if (/\bthreadripper\b/.test(name)) return 250;
+
+        if (/\bepyc\b/.test(name)) {
+          const modelMatch = name.match(/epyc\s+(\d{4,5})/);
+          const id = modelMatch ? modelMatch[1] : '';
+          const known = {
+            '7251': 120, '7282': 120, '7302': 155, '7313': 155,
+            '7352': 155, '7402': 200, '7443': 200, '7452': 155,
+            '7453': 225, '7502': 200, '7543': 225, '7551': 180,
+            '7552': 200, '7642': 225, '7662': 200, '7713': 225,
+            '7742': 225, '7763': 280, '7773x': 280, '9174f': 320,
+            '9224': 200, '9254': 200, '9274f': 320, '9334': 210,
+            '9354': 280, '9374f': 320, '9454': 290, '9474f': 360,
+            '9554': 360, '9654': 360, '9754': 360, '9845': 400,
+            '9965': 500, '9995': 500
+          };
+          const fullId = (name.match(/epyc\s+(\d{4,5}[a-z]?)/) || [])[1] || id;
+          if (known[fullId]) return known[fullId];
+          if (/epyc embedded/.test(name)) return 35;
+          if (/\b99\d\d\b/.test(name)) return 500;
+          if (/\b9[678]\d\d\b/.test(name)) return 360;
+          if (/\b9[345]\d\d\b/.test(name)) return 280;
+          if (/\b9[12]\d\d\b/.test(name)) return 200;
+          if (/\b7\d{3}\b/.test(name)) return 225;
+          return 180;
+        }
+
+        if (/\bxeon phi\b/.test(name)) return 250;
+        if (/\bxeon platinum\b/.test(name)) return 250;
+        if (/\bxeon gold\b/.test(name)) return 210;
+        if (/\bxeon silver\b/.test(name)) return 150;
+        if (/\bxeon bronze\b/.test(name)) return 100;
+        if (/\bxeon d-?\d/.test(name)) return 75;
+        if (/\bxeon w-?\d/.test(name)) return 180;
+        if (/\bxeon e-?\d/.test(name)) return 80;
+        if (/\bxeon\b/.test(name)) {
+          if (/e7-/.test(name)) return 130;
+          if (/e5-26/.test(name)) return 120;
+          if (/e5-16/.test(name)) return 95;
+          return 100;
+        }
+
+        if (/\bryzen ai max\+?\s*395\b/.test(name)) return 120;
+        if (/\bryzen ai\b/.test(name)) return 45;
+        if (/\bryzen\b/.test(name)) {
+          if (/\b\d{3,5}hx\b/.test(name)) return 75;
+          if (/\b\d{3,5}hs\b/.test(name)) return 45;
+          if (/\b\d{3,5}h\b/.test(name)) return 45;
+          if (/\b\d{3,5}u\b/.test(name)) return 20;
+          if (/\b\d{3,5}p\b/.test(name)) return 28;
+          if (/\b\d{3,5}y\b/.test(name)) return 8;
+          if (/\b[79]\d{3,4}x3d\b/.test(name)) return /ryzen 9/.test(name) ? 170 : 120;
+          if (/\bryzen 9\b/.test(name)) return /\b(?:7900|9900)x\b/.test(name) ? 120 : 170;
+          if (/\bryzen 7\b/.test(name)) return /\b(?:5800x|7700x|9700x|1800x|2700x|3800x)\b/.test(name) ? 105 : 65;
+          if (/\bryzen 5\b/.test(name)) return /\b\d{4}x\b/.test(name) ? 95 : 65;
+          if (/\bryzen 3\b/.test(name)) return 35;
+          return 65;
+        }
+
+        if (/\b(?:fx-9590|fx-9370)\b/.test(name)) return 220;
+        if (/\bfx-8\d{3}\b/.test(name)) return 125;
+        if (/\bfx-6\d{3}\b/.test(name)) return 95;
+        if (/\bfx-\d+/.test(name)) return 65;
+        if (/\bathlon silver .*\b\d{4}u\b/.test(name)) return 15;
+        if (/\bathlon\b/.test(name)) return /\b200ge\b|\b220ge\b|\b3000g\b/.test(name) ? 35 : 65;
+        if (/\bamd a4\b/.test(name)) return 65;
+        if (/\bamd a6\b|\bamd a8\b/.test(name)) return 95;
+        if (/\bamd a10\b/.test(name)) return 95;
+        if (/\bopteron\b/.test(name)) return 115;
+
+        // Intel: am Suffix sieht man Desktop vs. Mobil
+        if (/\b(?:core ultra|core [3579])\b/.test(name)) {
+          if (/\b\d{3,4}u\b/.test(name)) return 15;
+          if (/\b\d{3,4}v\b/.test(name)) return 25;
+          if (/\b\d{3,4}p\b/.test(name)) return 28;
+          if (/\b\d{3,4}hx\b/.test(name)) return 55;
+          if (/\b\d{3,4}hk\b|\b\d{3,4}h\b/.test(name)) return 45;
+          if (/\bi[3579]-\d{4,5}g\d\b/.test(name)) return 28;
+        }
+        if (/\bcore ultra [3579]\b/.test(name)) {
+          if (/\b\d{3,4}k\b/.test(name)) return 125;
+          return 65;
+        }
+        if (/\bcore i9\b/.test(name)) {
+          if (/\b\d{4,5}t\b/.test(name)) return 35;
+          if (/\b\d{4,5}hx\b/.test(name)) return 55;
+          if (/\b\d{4,5}h\b/.test(name)) return 45;
+          if (/\b\d{4,5}u\b/.test(name)) return 15;
+          if (/\b\d{4,5}k[sf]?\b/.test(name)) return 125;
+          return 65;
+        }
+        if (/\bcore i7\b/.test(name)) {
+          if (/\b\d{4,5}t\b/.test(name)) return 35;
+          if (/\b\d{4,5}hx\b/.test(name)) return 55;
+          if (/\b\d{4,5}h[qk]?\b/.test(name)) return 45;
+          if (/\b\d{4,5}u\b/.test(name)) return 15;
+          if (/\b\d{4,5}p\b/.test(name)) return 28;
+          if (/\b\d{4,5}k[f]?\b/.test(name)) return 125;
+          if (/\bi7-\d{4,5}g\d\b/.test(name)) return 28;
+          return 65;
+        }
+        if (/\bcore i5\b/.test(name)) {
+          if (/\b\d{4,5}t\b/.test(name)) return 35;
+          if (/\b\d{4,5}hx\b/.test(name)) return 55;
+          if (/\b\d{4,5}h[qk]?\b/.test(name)) return 45;
+          if (/\b\d{4,5}u\b/.test(name)) return 15;
+          if (/\b\d{4,5}p\b/.test(name)) return 28;
+          if (/\b\d{4,5}k[f]?\b/.test(name)) return 125;
+          return 65;
+        }
+        if (/\bcore i3\b/.test(name)) {
+          if (/\b\d{4,5}u\b/.test(name)) return 15;
+          if (/\b\d{4,5}t\b/.test(name)) return 35;
+          if (/\b\d{4,5}k\b/.test(name)) return 91;
+          return 35;
+        }
+        if (/\bpentium\b|\bceleron\b/.test(name)) return 35;
+        if (/\bintel n\d{3,4}\b/.test(name)) return 8;
+        if (/\bintel core\b/.test(name)) return 65;
+        if (/\barm\b/.test(name)) return 12;
+        return /laptop|mobile|notebook/.test(name) || deviceType === 'Laptop' ? 25 : 65;
+      }
+
+      function estimateGpuPowerWatt(model, deviceType) {
+        const name = String(model || '').toLowerCase().trim();
+        if (!name) return 0;
+        let watts = 0;
+        const catalogGpuWatt = plannerWattFromSpec(getPlannerGpuHardwareSpec(model)?.tdp);
+        if (catalogGpuWatt > 0) return catalogGpuWatt;
+
+        // Rechenzentrum / KI-Karten
+        if (/gb200 nvl72/.test(name)) return 120000;
+        if (/\bgb300\b/.test(name)) watts = 1200;
+        else if (/\bb200\b/.test(name)) watts = 1000;
+        else if (/\bb100\b/.test(name)) watts = 700;
+        else if (/\bh200\b/.test(name)) watts = 700;
+        else if (/\bh100\b|\bh800\b/.test(name)) watts = 700;
+        else if (/\bh20\b/.test(name)) watts = 400;
+        else if (/\ba800\b|\ba100\b/.test(name)) watts = 400;
+        else if (/\ba40\b/.test(name)) watts = 300;
+        else if (/\ba30\b/.test(name)) watts = 165;
+        else if (/\ba16\b/.test(name)) watts = 250;
+        else if (/\ba2\b/.test(name)) watts = 60;
+        else if (/\bl40s\b/.test(name)) watts = 350;
+        else if (/\bl40\b/.test(name)) watts = 300;
+        else if (/\bl4\b/.test(name)) watts = 72;
+        else if (/\btesla k80\b/.test(name)) watts = 300;
+        else if (/\btesla v100\b/.test(name)) watts = 300;
+        else if (/\btesla p100\b/.test(name)) watts = 250;
+        else if (/\btesla p40\b|\btesla m40\b/.test(name)) watts = 250;
+        else if (/\btesla t4\b/.test(name)) watts = 70;
+        else if (/\btesla p4\b/.test(name)) watts = 75;
+        else if (/\btrainium|\binferentia|\btpu v[2-6]|\bascend 910/.test(name)) watts = 300;
+
+        // GeForce RTX
+        else if (/\brtx\s*5090\b/.test(name)) watts = 575;
+        else if (/\brtx\s*5080\b/.test(name)) watts = 360;
+        else if (/\brtx\s*5070\s*ti\b/.test(name)) watts = 300;
+        else if (/\brtx\s*5070\b/.test(name)) watts = 250;
+        else if (/\brtx\s*5060\s*ti\b/.test(name)) watts = 180;
+        else if (/\brtx\s*5060\b/.test(name)) watts = 145;
+        else if (/\brtx\s*5050\b/.test(name)) watts = 100;
+        else if (/\brtx\s*4090\b/.test(name)) watts = 450;
+        else if (/\brtx\s*4080\b/.test(name)) watts = 320;
+        else if (/\brtx\s*4070\s*ti/.test(name)) watts = 285;
+        else if (/\brtx\s*4070\s*super\b/.test(name)) watts = 220;
+        else if (/\brtx\s*4070\b/.test(name)) watts = 200;
+        else if (/\brtx\s*4060\s*ti\b/.test(name)) watts = 160;
+        else if (/\brtx\s*4060\b/.test(name)) watts = 115;
+        else if (/\brtx\s*4050\b/.test(name)) watts = 80;
+        else if (/\brtx\s*3090\s*ti\b/.test(name)) watts = 450;
+        else if (/\brtx\s*3090\b/.test(name)) watts = 350;
+        else if (/\brtx\s*3080\s*ti\b/.test(name)) watts = 350;
+        else if (/\brtx\s*3080\b/.test(name)) watts = 320;
+        else if (/\brtx\s*3070\s*ti\b/.test(name)) watts = 290;
+        else if (/\brtx\s*3070\b/.test(name)) watts = 220;
+        else if (/\brtx\s*3060\s*ti\b/.test(name)) watts = 200;
+        else if (/\brtx\s*3060\b/.test(name)) watts = 170;
+        else if (/\brtx\s*3050\b/.test(name)) watts = 130;
+        else if (/\brtx\s*2080\s*ti\b/.test(name)) watts = 250;
+        else if (/\brtx\s*2080\s*super\b/.test(name)) watts = 250;
+        else if (/\brtx\s*2080\b/.test(name)) watts = 215;
+        else if (/\brtx\s*2070\s*super\b/.test(name)) watts = 215;
+        else if (/\brtx\s*2070\b/.test(name)) watts = 175;
+        else if (/\brtx\s*2060\s*super\b/.test(name)) watts = 175;
+        else if (/\brtx\s*2060\b/.test(name)) watts = 160;
+
+        // Workstation (Quadro / RTX)
+        else if (/\brtx pro 6000 blackwell\b/.test(name) || /\brtx 6000 blackwell\b/.test(name)) watts = 600;
+        else if (/\brtx pro 5000 blackwell\b/.test(name)) watts = 300;
+        else if (/\brtx pro 4000 blackwell\b/.test(name)) watts = 200;
+        else if (/\brtx 6000 ada\b|\brtx a6000\b|\bquadro rtx 6000\b|\bquadro rtx 8000\b/.test(name)) watts = 300;
+        else if (/\brtx 5000 ada\b|\brtx a5000\b|\bquadro rtx 5000\b/.test(name)) watts = 230;
+        else if (/\brtx 4500 ada\b/.test(name)) watts = 210;
+        else if (/\brtx 4000 ada\b|\brtx a4000\b|\bquadro rtx 4000\b/.test(name)) watts = 140;
+        else if (/\brtx 2000(?:e)? ada\b|\brtx a2000\b/.test(name)) watts = 70;
+        else if (/\brtx a1000\b|\brtx pro 2000 blackwell\b/.test(name)) watts = 50;
+        else if (/\bquadro p6000\b/.test(name)) watts = 250;
+        else if (/\bquadro p5000\b/.test(name)) watts = 180;
+        else if (/\bquadro p4000\b/.test(name)) watts = 105;
+        else if (/\bquadro p2000\b/.test(name)) watts = 75;
+        else if (/\bquadro p1000\b/.test(name)) watts = 47;
+        else if (/\bquadro k6000\b/.test(name)) watts = 225;
+        else if (/\bquadro k[245]000\b/.test(name)) watts = 100;
+        else if (/\bquadro m6000\b/.test(name)) watts = 250;
+        else if (/\bquadro m[245]000\b/.test(name)) watts = 120;
+
+        // GTX / GT
+        else if (/\bgtx\s*titan z\b/.test(name)) watts = 375;
+        else if (/\bgtx\s*(?:titan x|titan black|titan)\b/.test(name)) watts = 250;
+        else if (/\bgtx\s*1080\s*ti\b/.test(name)) watts = 250;
+        else if (/\bgtx\s*1080\b/.test(name)) watts = 180;
+        else if (/\bgtx\s*1070\s*ti\b/.test(name)) watts = 180;
+        else if (/\bgtx\s*1070\b/.test(name)) watts = 150;
+        else if (/\bgtx\s*1660\s*ti\b/.test(name)) watts = 120;
+        else if (/\bgtx\s*1660\s*super\b/.test(name)) watts = 125;
+        else if (/\bgtx\s*1660\b/.test(name)) watts = 120;
+        else if (/\bgtx\s*1650\s*super\b/.test(name)) watts = 100;
+        else if (/\bgtx\s*1650\b|\bgtx\s*1630\b/.test(name)) watts = 75;
+        else if (/\bgtx\s*1060\b/.test(name)) watts = 120;
+        else if (/\bgtx\s*1050\s*ti\b/.test(name)) watts = 75;
+        else if (/\bgtx\s*1050\b/.test(name)) watts = 75;
+        else if (/\bgtx\s*980\s*ti\b/.test(name)) watts = 250;
+        else if (/\bgtx\s*980\b/.test(name)) watts = 165;
+        else if (/\bgtx\s*970\b/.test(name)) watts = 145;
+        else if (/\bgtx\s*960\b/.test(name)) watts = 120;
+        else if (/\bgtx\s*950\b/.test(name)) watts = 90;
+        else if (/\bgtx\s*780(?:\s*ti)?\b/.test(name)) watts = 250;
+        else if (/\bgtx\s*770\b/.test(name)) watts = 230;
+        else if (/\bgtx\s*760\b/.test(name)) watts = 170;
+        else if (/\bgtx\s*750\s*ti\b/.test(name)) watts = 60;
+        else if (/\bgtx\s*750\b/.test(name)) watts = 55;
+        else if (/\bgtx\s*6[456]\d\b/.test(name)) watts = 75;
+        else if (/\bgtx\s*5\d\d\b/.test(name)) watts = 150;
+        else if (/\bgt\s*710\b|\bgt\s*720\b/.test(name)) watts = 20;
+        else if (/\bgt\s*730\b/.test(name)) watts = 38;
+        else if (/\bgt\s*740\b/.test(name)) watts = 64;
+        else if (/\bgt\s*1010\b|\bgt\s*1030\b/.test(name)) watts = 30;
+
+        // AMD Radeon
+        else if (/\brx\s*9070\s*xt\b/.test(name)) watts = 304;
+        else if (/\brx\s*9070\s*gre\b/.test(name)) watts = 220;
+        else if (/\brx\s*9070\b/.test(name)) watts = 220;
+        else if (/\brx\s*9060\s*xt\b/.test(name)) watts = 160;
+        else if (/\brx\s*9060\b/.test(name)) watts = 130;
+        else if (/\brx\s*8900\s*xtx\b/.test(name)) watts = 355;
+        else if (/\brx\s*8800\s*xt\b/.test(name)) watts = 300;
