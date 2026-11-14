@@ -3,7 +3,14 @@ from pathlib import Path
 root = Path(".")
 parts = sorted((root / ".staging" / "archive.parts").glob("*.b64"))
 if not parts: raise RuntimeError("Archivteile fehlen")
-archive_bytes = base64.b64decode("".join(p.read_text(encoding="ascii").strip() for p in parts))
+encoded_parts = [(p.name, p.read_text(encoding="ascii").strip()) for p in parts]
+decoded_parts = []
+for part_name, encoded_part in encoded_parts:
+    try:
+        decoded_parts.append(base64.b64decode(encoded_part))
+    except Exception as exc:
+        raise RuntimeError(f"Archivteil {part_name} ist ungültig (Länge {len(encoded_part)}): {exc}") from exc
+archive_bytes = b"".join(decoded_parts)
 with zipfile.ZipFile(io.BytesIO(archive_bytes)) as z:
     cpu_raw = z.read("Beide-Listen/cpus_all.txt")
     gpu_raw = z.read("Beide-Listen/gpus_all.txt")
