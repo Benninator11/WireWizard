@@ -1,5 +1,7 @@
 # 🖥️ ServerWizard & WireWizard
 
+> **Kurzbeschreibung:** ServerWizard und WireWizard vereinen einen visuellen Server-/Hardwareplaner und einen Kabelplaner in einer gemeinsamen Browseroberfläche. Das Repository enthält die Webanwendung sowie CPU- und GPU-Listen.
+
 **Ein gemeinsames Planungstool für Server, Hardware und Kabelverbindungen.**
 
 ServerWizard und WireWizard sind zwei miteinander verbundene Planungswerkzeuge, mit denen sich Serveraufbauten und Kabelverbindungen übersichtlich visualisieren und organisieren lassen. Beide Planer sind in einer gemeinsamen Weboberfläche integriert und können bequem gewechselt werden.
@@ -77,7 +79,7 @@ GitHub: [@Benninator111](https://github.com/Benninator111)
 
 ## 📄 Lizenz
 
-Dieses Projekt ist unter der MIT Lizenz weiters zur lizenz in der Lizenz Datei
+Dieses Projekt steht unter der MIT License. Siehe die Datei `LICENSE` für den vollständigen Lizenztext.
 
 ---
 
