@@ -1,1 +1,1 @@
-Apply supplied CPU and GPU catalogs from Beide-Listen.zip.
+Retry catalog import with per-part validation.
