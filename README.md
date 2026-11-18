@@ -15,3 +15,10 @@ Serve the project over HTTPS (for example GitHub Pages), then use the browser's 
 
 ## Project backup
 Each planner includes JSON export/import controls. Existing automatic browser storage remains in place.
+
+
+## 3D rack visualization
+- Rack equipment is shown with individual chassis depth, front details and status indicators.
+- The rear view renders rounded 3D cable bodies and connector housings in the cabinet scene.
+- Cable path length is shown as an estimate including connector and slack allowance.
+- The power overview includes an estimated current at 230 V; it is not a live electrical measurement.

@@ -10397,6 +10397,7 @@ table{max-width:100%;}
       [visualT('Geräte gesamt','Total devices'),String(stats.all.length),visualT('im Projekt','in project')],
       [visualT('Geräte platziert','Devices placed'),String(stats.placed.length),`${stats.unplaced} ${visualT('nicht im Rack','not in rack')}`],
       [visualT('Strom-/Wärmelast','Power / heat load'),`${Math.round(stats.total).toLocaleString()} W`,visualT('konfiguriert, geschätzt','configured estimate')],
+      [visualT('Rack-Strom','Rack current'),(stats.placed.reduce((sum,item)=>sum+Math.max(0,Number(item.device.powerWatt)||0),0)/230).toFixed(1)+' A',stats.placed.reduce((sum,item)=>sum+Math.max(0,Number(item.device.powerWatt)||0),0).toLocaleString()+' W · '+visualT('bei 230 V geschätzt','estimated at 230 V')],
       [visualT('Belegte Höheneinheiten','Rack units used'),`${placedUnits} / ${cap} U`,`${Math.round(placedUnits/cap*100)}% ${visualT('Belegung','occupied')}`]
     ];
     visualStats.replaceChildren();
@@ -10642,6 +10643,114 @@ table{max-width:100%;}
     });
 
   }
+
+  // Render cable paths as rounded 3D tube segments with depth variation and plug housings.
+  function renderVolumetricCables() {
+    const back = visualCabinet && visualCabinet.querySelector('.ww-3d-back');
+    if (!back || !visualRearSvg) return;
+    const oldLayer = back.querySelector('.ww-3d-cable-volume');
+    if (oldLayer) oldLayer.remove();
+    const sourceLayer = visualRearSvg.querySelector('g[aria-label="Verbundene Kabel"]');
+    const paths = sourceLayer ? [...sourceLayer.querySelectorAll('path[data-3d-cable]')] : [];
+    if (!paths.length) {
+      if (sourceLayer) { sourceLayer.style.opacity = '1'; sourceLayer.style.visibility = 'visible'; }
+      const badge = visualOverlay.querySelector('#ww3dCableLengthSummary');
+      if (badge) badge.textContent = state.lang === 'en' ? '0 cables' : '0 Kabel';
+      return;
+    }
+    const rect = visualRearSvg.getBoundingClientRect();
+    const vb = String(visualRearSvg.getAttribute('viewBox') || '0 0 300 630').trim().split(/\s+/).map(Number);
+    const vbWidth = vb[2] || 300;
+    const vbHeight = vb[3] || Math.max(1, visualCapacityCount() * visualUnitSize());
+    const widthScale = (rect.width || 300) / vbWidth;
+    const heightScale = (rect.height || vbHeight) / vbHeight;
+    const xMmPerUnit = 482.6 / vbWidth;
+    const yMmPerUnit = (visualCapacityCount() * 44.45) / vbHeight;
+    const depthMmPerPx = 1000 / 290;
+    const layer = document.createElement('div');
+    layer.className = 'ww-3d-cable-volume';
+    layer.setAttribute('aria-hidden', 'true');
+    back.appendChild(layer);
+    let totalMm = 0;
+    let renderedCount = 0;
+    paths.forEach((path, cableIndex) => {
+      if (typeof path.getTotalLength !== 'function' || typeof path.getPointAtLength !== 'function') return;
+      let pathLength = 0;
+      try { pathLength = path.getTotalLength(); } catch (error) { return; }
+      if (!Number.isFinite(pathLength) || pathLength <= 0) return;
+      const width = Math.max(3.2, Number(path.getAttribute('stroke-width')) || 4.8);
+      const color = path.getAttribute('stroke') || '#43b9e8';
+      const title = path.querySelector('title')?.textContent || (state.lang === 'en' ? 'Rack cable' : 'Rack-Kabel');
+      const steps = Math.max(18, Math.min(34, Math.ceil(pathLength / 12)));
+      const pts = [];
+      for (let step = 0; step <= steps; step++) {
+        const t = step / steps;
+        let point;
+        try { point = path.getPointAtLength(pathLength * t); } catch (error) { point = null; }
+        if (!point) continue;
+        pts.push({
+          x: point.x * widthScale,
+          y: point.y * heightScale,
+          z: 4 + (cableIndex % 7) * 2.1 + Math.sin(t * Math.PI) * (8 + (cableIndex % 3) * 2)
+        });
+      }
+      if (pts.length < 2) return;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b = pts[i + 1];
+        const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+        const length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (length < 0.2) continue;
+        const angleZ = Math.atan2(dy, dx);
+        const angleY = Math.atan2(-dz, Math.sqrt(dx * dx + dy * dy));
+        const tube = document.createElement('span');
+        tube.className = 'ww-3d-cable-segment';
+        tube.style.width = length.toFixed(2) + 'px';
+        tube.style.height = width.toFixed(2) + 'px';
+        tube.style.left = a.x.toFixed(2) + 'px';
+        tube.style.top = a.y.toFixed(2) + 'px';
+        tube.style.background = 'linear-gradient(180deg,rgba(255,255,255,.92) 0%,' + color + ' 24%,' + color + ' 58%,rgba(0,0,0,.66) 100%)';
+        tube.style.transform = 'translate3d(0,' + (-width / 2).toFixed(2) + 'px,' + a.z.toFixed(2) + 'px) rotateZ(' + angleZ.toFixed(5) + 'rad) rotateY(' + angleY.toFixed(5) + 'rad)';
+        tube.title = title;
+        layer.appendChild(tube);
+        totalMm += Math.hypot(dx / widthScale * xMmPerUnit, dy / heightScale * yMmPerUnit, dz * depthMmPerPx);
+      }
+      [pts[0], pts[pts.length - 1]].forEach((point, endIndex) => {
+        const neighbour = endIndex === 0 ? pts[1] : pts[pts.length - 2];
+        const plug = document.createElement('span');
+        plug.className = 'ww-3d-cable-plug';
+        plug.style.left = (point.x - 6).toFixed(2) + 'px';
+        plug.style.top = (point.y - Math.max(4, width * 0.72)).toFixed(2) + 'px';
+        plug.style.width = Math.max(12, width * 2.2).toFixed(2) + 'px';
+        plug.style.height = Math.max(8, width * 1.45).toFixed(2) + 'px';
+        plug.style.transform = 'translateZ(' + point.z.toFixed(2) + 'px) rotateZ(' + Math.atan2(point.y - neighbour.y, point.x - neighbour.x).toFixed(5) + 'rad)';
+        plug.style.setProperty('--plug-color', color);
+        plug.title = title;
+        layer.appendChild(plug);
+      });
+      totalMm += 280;
+      renderedCount += 1;
+    });
+    if (renderedCount > 0) {
+      sourceLayer.style.opacity = '0';
+      sourceLayer.style.visibility = 'hidden';
+    } else {
+      sourceLayer.style.opacity = '1';
+      sourceLayer.style.visibility = 'visible';
+    }
+    let badge = visualOverlay.querySelector('#ww3dCableLengthSummary');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.id = 'ww3dCableLengthSummary';
+      const instructions = visualOverlay.querySelector('.ww-3d-instructions');
+      if (instructions) instructions.appendChild(badge);
+    }
+    const metres = (totalMm / 1000).toFixed(1);
+    badge.textContent = state.lang === 'en' ? renderedCount + ' cables · approx. ' + metres + ' m' : renderedCount + ' Kabel · ca. ' + metres + ' m';
+    badge.title = state.lang === 'en'
+      ? 'Estimated cable path length including connector and slack allowance; not a measured length.'
+      : 'Geschätzte Kabelführung inklusive Stecker- und Reservenzuschlag; keine gemessene Länge.';
+  }
+
   function visualUpdateBackToggle() {
     if (!visualBackToggle) return;
     visualBackToggle.textContent = state.lang === 'en'
@@ -10670,6 +10779,7 @@ table{max-width:100%;}
     visualCoolingDevices.replaceChildren();
     const placed=visualPlacedDevices();
     renderVisualRear(placed, cap, unit, height);
+    renderVolumetricCables();
     visualRack3dCount.textContent=`${placed.length} ${visualT('Geräte im Rack','devices in rack')}`;
     visualOverlay.querySelector('#ww3dEmpty').hidden=placed.length!==0;
     visualOverlay.querySelector('#ww3dInner').style.height=`${innerHeight}px`;
@@ -10707,7 +10817,24 @@ table{max-width:100%;}
       if (String(device.id) === visualSelectedDeviceId) block.classList.add('is-selected');
       block.addEventListener('click', (event) => { event.stopPropagation(); visualSelectDevice(device.id); });
       block.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); visualSelectDevice(device.id); } });
-      block.append(topFace,rightFace,leftFace,rearFace,name,watts);visual3dDevices.appendChild(block);
+      block.dataset.deviceId = String(device.id);
+      const ledCluster = document.createElement('i');
+      ledCluster.className = 'ww-3d-device-led-cluster';
+      ledCluster.setAttribute('aria-hidden', 'true');
+      const powerValue = Math.max(0, Number(device.powerWatt) || 0);
+      ledCluster.dataset.load = powerValue >= 900 ? 'high' : powerValue >= 350 ? 'medium' : 'normal';
+      for (let ledIndex = 0; ledIndex < 3; ledIndex++) {
+        const led = document.createElement('i');
+        led.className = 'ww-3d-status-led led-' + ledIndex;
+        ledCluster.appendChild(led);
+      }
+      const fanDetails = document.createElement('i');
+      fanDetails.className = 'ww-3d-device-fans';
+      fanDetails.setAttribute('aria-hidden', 'true');
+      fanDetails.innerHTML = '<i></i><i></i>';
+      block.append(topFace,rightFace,leftFace,rearFace,name,watts,ledCluster);
+      if (dh >= 13 && /server|switch|router|storage|nas|san|gpu|workstation|firewall/i.test(String(device.type || '') + ' ' + String(device.name || ''))) block.appendChild(fanDetails);
+      visual3dDevices.appendChild(block);
       const heat=document.createElement('div');const wattsValue=Math.max(0,Number(device.powerWatt)||0);
       heat.className='ww-cool-device'+(wattsValue>=900?' heat-hot':wattsValue>=350?' heat-warm':'');
       heat.style.top=`${top}px`;heat.style.height=`${dh}px`;
@@ -10867,6 +10994,31 @@ table{max-width:100%;}
       .ww-power-bar i.warn{background:#e0a83a}.ww-power-bar i.bad{background:#d5483a}
     `;
     document.head.appendChild(style);
+    const realismStyle = document.createElement('style');
+    realismStyle.textContent = \`
+      .ww-3d-cable-volume{position:absolute;inset:0;z-index:5;pointer-events:none;transform-style:preserve-3d;overflow:visible}
+      .ww-3d-cable-segment{position:absolute;display:block;border-radius:999px;box-sizing:border-box;transform-origin:0 50%;transform-style:preserve-3d;box-shadow:0 1px 2px rgba(0,0,0,.72),inset 0 1px 1px rgba(255,255,255,.36),inset 0 -1px 1px rgba(0,0,0,.55);backface-visibility:visible}
+      .ww-3d-cable-segment::after{content:"";position:absolute;left:10%;right:12%;top:1px;height:1px;border-radius:99px;background:rgba(255,255,255,.72);opacity:.75}
+      .ww-3d-cable-plug{position:absolute;display:block;z-index:2;border:1px solid rgba(225,237,245,.85);border-radius:3px;box-sizing:border-box;transform-origin:50% 50%;transform-style:preserve-3d;background:linear-gradient(180deg,#e5edf2 0%,#687985 18%,var(--plug-color,#43b9e8) 20%,var(--plug-color,#43b9e8) 70%,#293944 100%);box-shadow:0 2px 3px rgba(0,0,0,.72),inset 0 1px rgba(255,255,255,.5)}
+      .ww-3d-cable-plug::after{content:"";position:absolute;left:25%;right:25%;top:1px;height:2px;border-radius:2px;background:rgba(255,255,255,.8)}
+      #ww3dCableLengthSummary{align-self:center;margin-left:auto;padding:4px 8px;border:1px solid rgba(255,255,255,.16);border-radius:99px;background:rgba(10,17,24,.55);color:#eaf4fb;font-size:10px;white-space:nowrap}
+      .ww-3d-door{background-color:rgba(12,22,31,.48);background-image:radial-gradient(circle,rgba(4,11,17,.96) 0 1px,rgba(210,226,236,.42) 1.2px,transparent 1.8px),linear-gradient(100deg,rgba(255,255,255,.2),rgba(255,255,255,.035) 42%,rgba(255,255,255,.16));background-size:6px 6px,100% 100%;background-position:center;backdrop-filter:blur(.6px)}
+      .ww-door-hinge{position:absolute;left:-5px;width:9px;height:28px;border:1px solid #52616c;border-radius:2px;background:linear-gradient(90deg,#26343e,#c5d1d9 45%,#586873);box-shadow:0 1px 3px rgba(0,0,0,.65)}
+      .ww-door-hinge.top{top:12%}.ww-door-hinge.bottom{bottom:12%}
+      .ww-door-lock{position:absolute;right:9px;top:50%;width:10px;height:24px;transform:translateY(-50%);border:1px solid #d2dce2;border-radius:2px;background:linear-gradient(90deg,#283640,#c5d0d6,#566671);box-shadow:0 1px 3px #000}
+      .ww-3d-device-led-cluster{position:absolute;z-index:7;right:25px;top:50%;display:flex;gap:3px;align-items:center;transform:translateY(-50%);pointer-events:none}
+      .ww-3d-status-led{display:block;width:4px;height:4px;border-radius:50%;background:#71e7a9;box-shadow:0 0 4px rgba(90,235,160,.8),0 0 7px rgba(50,190,130,.35)}
+      .ww-3d-status-led.led-1{background:#54bfff;box-shadow:0 0 4px rgba(84,191,255,.8)}
+      .ww-3d-status-led.led-2{background:#d9e2e8;box-shadow:0 0 3px rgba(230,240,250,.5)}
+      .ww-3d-device-led-cluster[data-load="medium"] .led-0{background:#ffc45e;box-shadow:0 0 5px rgba(255,180,65,.8)}
+      .ww-3d-device-led-cluster[data-load="high"] .led-0{background:#ff6868;box-shadow:0 0 6px rgba(255,65,65,.85)}
+      .ww-3d-device-fans{position:absolute;z-index:6;right:7px;top:50%;display:flex;gap:3px;transform:translateY(-50%);pointer-events:none}
+      .ww-3d-device-fans i{display:block;width:7px;height:7px;border:1px solid #9aaeb9;border-radius:50%;background:radial-gradient(circle,#b7c9d4 0 1px,#17232c 1.3px 2px,transparent 2.3px);box-shadow:0 0 2px rgba(190,220,240,.45)}
+      .ww-3d-device-fans i::after{content:"";display:block;width:3px;height:3px;margin:1px;border-radius:50%;border:1px dotted #8195a2}
+      .ww-3d-device .ww-watts{padding-right:2px}
+      .ww-3d-scene{transform-style:preserve-3d}
+    \`;
+    document.head.appendChild(realismStyle);
 
     const toolbar = visualOverlay.querySelector('.ww-workspace-toolbar');
     const bar = document.createElement('div');
@@ -10888,6 +11040,12 @@ table{max-width:100%;}
 
     const cabinet = visualCabinet;
     const door = document.createElement('div'); door.className = 'ww-3d-door'; door.setAttribute('aria-hidden', 'true');
+    ['top','bottom'].forEach((position) => {
+      const hinge = document.createElement('span');
+      hinge.className = 'ww-door-hinge ' + position;
+      door.appendChild(hinge);
+    });
+    const lock = document.createElement('span'); lock.className = 'ww-door-lock'; door.appendChild(lock);
     cabinet.querySelector('.ww-3d-front').appendChild(door);
     // Standard: Seitenwände, Rückwand und Dach sichtbar, Tür offen
     const parts = { door: false, sides: true, back: true, top: true };
