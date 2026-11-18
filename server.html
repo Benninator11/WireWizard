@@ -10995,7 +10995,7 @@ table{max-width:100%;}
     `;
     document.head.appendChild(style);
     const realismStyle = document.createElement('style');
-    realismStyle.textContent = \`
+    realismStyle.textContent = `
       .ww-3d-cable-volume{position:absolute;inset:0;z-index:5;pointer-events:none;transform-style:preserve-3d;overflow:visible}
       .ww-3d-cable-segment{position:absolute;display:block;border-radius:999px;box-sizing:border-box;transform-origin:0 50%;transform-style:preserve-3d;box-shadow:0 1px 2px rgba(0,0,0,.72),inset 0 1px 1px rgba(255,255,255,.36),inset 0 -1px 1px rgba(0,0,0,.55);backface-visibility:visible}
       .ww-3d-cable-segment::after{content:"";position:absolute;left:10%;right:12%;top:1px;height:1px;border-radius:99px;background:rgba(255,255,255,.72);opacity:.75}
@@ -11017,7 +11017,7 @@ table{max-width:100%;}
       .ww-3d-device-fans i::after{content:"";display:block;width:3px;height:3px;margin:1px;border-radius:50%;border:1px dotted #8195a2}
       .ww-3d-device .ww-watts{padding-right:2px}
       .ww-3d-scene{transform-style:preserve-3d}
-    \`;
+    `;
     document.head.appendChild(realismStyle);
 
     const toolbar = visualOverlay.querySelector('.ww-workspace-toolbar');
