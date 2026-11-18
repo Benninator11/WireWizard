@@ -1,4 +1,4 @@
-const CACHE = 'wirewizard-pwa-v2';
+const CACHE = 'wirewizard-pwa-v3';
 const CORE = ['./', './index.html', './server.html', './wire.html', './manifest.json', './hardware-data.json'];
 
 self.addEventListener('install', (event) => {
